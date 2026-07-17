@@ -1,0 +1,27 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+.gss/
+
+# Local Vector Database (ChromaDB)
+chroma_data/
+
+# Environment Variables & Secrets
+.env
+
+# Python Cache & Builds
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
