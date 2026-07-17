@@ -1,19 +1,22 @@
 import os
 import sys
 import logging
-import urllib.request
-import urllib.parse
-import xml.etree.ElementTree as ET
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 from mcp.server.fastmcp import FastMCP
-from pathlib import Path
+
+# Import modular components
+from config import settings
+from search_engine import CrossDomainSearchEngine
+from scaffolder import ProjectScaffolder
+from workspace_analyzer import WorkspaceAnalyzer
+from repo_profiler import RepoProfiler
 
 # -------------------------------------------------------------------------
 # STDOUT PROTECTIVE LOGGING SETUP
 # -------------------------------------------------------------------------
 # MCP relies entirely on stdout for JSON-RPC multiplexing.
-# Standard print statements or root loggers outputting to stdout WILL break the server.
+# Debugging logs are explicitly routed to stderr.
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -22,30 +25,15 @@ logging.basicConfig(
 logger = logging.getLogger("IdeationGOAT")
 
 # -------------------------------------------------------------------------
-# CHROMADB DETECTION & SETUP
+# INITIALIZE SERVICES
 # -------------------------------------------------------------------------
-try:
-    import chromadb
-    from chromadb.utils import embedding_functions
-    HAS_CHROMADB = True
-    logger.info("ChromaDB library detected. Local vector database integration enabled.")
-except ImportError:
-    HAS_CHROMADB = False
-    logger.warning("ChromaDB library not found. Falling back to structured memory store for GitHub repositories.")
+mcp = FastMCP("IdeationGOAT")
+search_engine = CrossDomainSearchEngine()
+scaffolder = ProjectScaffolder()
+workspace_analyzer = WorkspaceAnalyzer()
+repo_profiler = RepoProfiler()
 
-# -------------------------------------------------------------------------
-# APPLICATION SETUP
-# -------------------------------------------------------------------------
-mcp = FastMCP(
-    name="IdeationGOAT",
-    version="1.2.0",
-    description="Cross-Domain Knowledge Hybridization Engine via Inverse Vector Topology"
-)
-
-# -------------------------------------------------------------------------
-# IN-MEMORY STATE FOR METAPHOR CANVAS
-# -------------------------------------------------------------------------
-# Stores details of the last search query to dynamically construct the node-constellation resource
+# In-memory session cache for get_metaphor_canvas
 LAST_SEARCH = {
     "query": "",
     "mode": "",
@@ -53,175 +41,12 @@ LAST_SEARCH = {
 }
 
 # -------------------------------------------------------------------------
-# KNOWLEDGE BASE MAPPING (For fallbacks, analogies, and patent checks)
+# DATA INPUT SCHEMAS
 # -------------------------------------------------------------------------
-MOCK_REPOS = [
-    {"source": "GitHub", "title": "CacheGraphene", "url": "https://github.com/example/CacheGraphene", "summary": "Lock-free persistent LRU caching layer utilizing transactional memory primitives.", "category": "cs.SE"},
-    {"source": "GitHub", "title": "MeshFlow", "url": "https://github.com/example/MeshFlow", "summary": "High-performance service mesh router optimizing network package distribution using adaptive load balancing.", "category": "cs.NI"},
-    {"source": "GitHub", "title": "RaftGuardian", "url": "https://github.com/example/RaftGuardian", "summary": "Distributed consensus framework with automated partition recovery and split-brain resolution loops.", "category": "cs.DC"},
-    {"source": "GitHub", "title": "ShedValve", "url": "https://github.com/example/ShedValve", "summary": "Concurrent queue with automatic load-shedding and flow-throttling under heavy CPU write spikes.", "category": "cs.DS"},
-    {"source": "GitHub", "title": "SecurInvert", "url": "https://github.com/example/SecurInvert", "summary": "Privacy-preserving database perturbation engine generating noise vectors to shield analytical queries.", "category": "cs.CR"}
-]
-
-CROSS_DOMAIN_ANALOGS = [
-    {
-        "id": "bio-01",
-        "source": "Google Scholar (Neurobiology)",
-        "domain": "Biology / Neurobiology",
-        "title": "Cephalopod Synaptic Decay & Eviction Dynamics",
-        "summary": "Mathematical modeling of non-linear neurotransmitter decay pathways that optimize neural energy distribution by evicting low-frequency signals.",
-        "latent_mechanism": "Dynamic, non-linear energy-consumption-aware signal decay.",
-        "fit_analogy": "Instead of static TTL (Time-To-Live) or traditional LRU (Least Recently Used) caching, evict cache keys dynamically based on a state decay curve matching compute/memory overhead constraints.",
-        "keywords": ["cache", "evict", "memory", "lru", "ttl", "storage", "database", "expire"]
-    },
-    {
-        "id": "botany-01",
-        "source": "arXiv (Plant Biology)",
-        "domain": "Biology / Botany",
-        "title": "Leaf Vein Network Optimization under Variable Transpiration",
-        "summary": "How angiosperm venation patterns dynamically reroute water flow around localized damage or high evaporation zones using hierarchical loop redundancy.",
-        "latent_mechanism": "Hierarchical redundant loop rerouting.",
-        "fit_analogy": "Applies to CDN routing or service mesh traffic balancing by creating self-healing, mesh-loop pathways that route around failed nodes without global routing table updates.",
-        "keywords": ["route", "load", "network", "mesh", "traffic", "cdn", "distribute", "balancer"]
-    },
-    {
-        "id": "patent-01",
-        "source": "US Patent Office (Materials Science)",
-        "domain": "Mechanical Engineering / Materials Science",
-        "title": "Self-Healing Structural Composites (US-9876543-B2)",
-        "summary": "A composite material embedded with micro-capsules of healing agents that rupture under stress or cracks, autonomously sealing the structural integrity of the wing.",
-        "latent_mechanism": "Localized micro-capsule stress-induced autonomous healing.",
-        "fit_analogy": "In a distributed database cluster, encapsulate state partitions in localized monitoring envelopes ('micro-capsules') that automatically instantiate isolated repair actions (like re-replication or log rebuilding) when load/error thresholds cross a critical rupture point.",
-        "keywords": ["heal", "failover", "cluster", "recovery", "database", "fault", "elastic", "replicate"]
-    },
-    {
-        "id": "hydraulics-01",
-        "source": "US Patent Office (Hydraulic Systems)",
-        "domain": "Fluid Dynamics / Hydraulics",
-        "title": "Self-Cleaning Pressure-Drop Manifold (US-5412901-A)",
-        "summary": "A hydraulic manifold that uses passive pressure-differential valves to automatically flush debris and shed high-pressure surges without stopping downstream flow.",
-        "latent_mechanism": "Passive pressure-differential feedback loop shedding.",
-        "fit_analogy": "Applies to queue load-shedding and rate-limiting. Instead of active CPU-intensive inspection of incoming queues, use a passive rate-differential filter that dumps overflow traffic directly to cold logging tables when queue pressure spikes.",
-        "keywords": ["queue", "overflow", "pressure", "rate", "limit", "shed", "concurrency", "buffer"]
-    },
-    {
-        "id": "acoustics-01",
-        "source": "Google Scholar (Acoustic Engineering)",
-        "domain": "Physics / Acoustics",
-        "title": "Adaptive Noise Cancellation Waveform Inversion",
-        "summary": "Real-time acoustic wave phase inversion algorithms that dynamically cancel ambient background noise by generating destructive interference fields.",
-        "latent_mechanism": "Destructive interference phase inversion.",
-        "fit_analogy": "Applies to database privacy protection or adversarial defense. Generate 'destructive interference' fake data records in real-time that cancel out the signature of user search trends, protecting database queries against side-channel analysis.",
-        "keywords": ["noise", "cancel", "filter", "privacy", "secure", "perturb", "defense", "obfuscate"]
-    }
-]
-
-# -------------------------------------------------------------------------
-# arXiv API & LOCAL CHROMADB ADAPTERS
-# -------------------------------------------------------------------------
-def search_arxiv(query_term: str, max_results: int = 5) -> List[Dict[str, Any]]:
-    """
-    Queries the live public arXiv API to fetch relevant research papers.
-    """
-    logger.info(f"Querying arXiv API for term: {query_term}")
-    formatted_query = urllib.parse.quote(query_term)
-    url = f"http://export.arxiv.org/api/query?search_query=all:{formatted_query}&max_results={max_results * 2}"
-    
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=8) as response:
-            xml_data = response.read()
-        
-        root = ET.fromstring(xml_data)
-        ns = {
-            'atom': 'http://www.w3.org/2005/Atom',
-            'arxiv': 'http://arxiv.org/schemas/atom'
-        }
-        
-        papers = []
-        for entry in root.findall('atom:entry', ns):
-            title_elem = entry.find('atom:title', ns)
-            summary_elem = entry.find('atom:summary', ns)
-            id_elem = entry.find('atom:id', ns)
-            primary_cat_elem = entry.find('arxiv:primary_category', ns)
-            
-            title = title_elem.text.strip() if title_elem is not None else "Unknown Paper"
-            summary = summary_elem.text.strip() if summary_elem is not None else "No abstract available."
-            summary = " ".join(summary.split())
-            paper_id = id_elem.text.strip() if id_elem is not None else "#"
-            
-            category = ""
-            if primary_cat_elem is not None:
-                category = primary_cat_elem.get('term', '')
-            else:
-                cat_elem = entry.find('atom:category', ns)
-                if cat_elem is not None:
-                    category = cat_elem.get('term', '')
-            
-            papers.append({
-                "source": "arXiv",
-                "title": title,
-                "url": paper_id,
-                "summary": summary,
-                "category": category
-            })
-        return papers
-    except Exception as e:
-        logger.error(f"Failed to fetch research papers from arXiv: {str(e)}")
-        return []
-
-def query_local_db(query_term: str, n_results: int = 5) -> List[Dict[str, Any]]:
-    """
-    Queries local ChromaDB github_repos collection, falling back to mock repositories if unavailable.
-    """
-    if not HAS_CHROMADB:
-        logger.info("Using mock repository store query fallback.")
-        matches = []
-        query_words = set(query_term.lower().split())
-        for repo in MOCK_REPOS:
-            repo_text = (repo["title"] + " " + repo["summary"]).lower()
-            if any(word in repo_text for word in query_words):
-                matches.append(repo)
-        return matches[:n_results]
-        
-    try:
-        client = chromadb.PersistentClient(path="./chroma_data")
-        default_ef = embedding_functions.DefaultEmbeddingFunction()
-        collection = client.get_or_create_collection(
-            name="github_repos",
-            embedding_function=default_ef
-        )
-        
-        if collection.count() == 0:
-            logger.info("Local database is empty. Using mock repository fallback.")
-            matches = []
-            query_words = set(query_term.lower().split())
-            for repo in MOCK_REPOS:
-                repo_text = (repo["title"] + " " + repo["summary"]).lower()
-                if any(word in repo_text for word in query_words):
-                    matches.append(repo)
-            return matches[:n_results]
-            
-        results = collection.query(
-            query_texts=[query_term],
-            n_results=n_results
-        )
-        
-        matches = []
-        if results and results['ids'] and len(results['ids'][0]) > 0:
-            for i in range(len(results['ids'][0])):
-                metadata = results['metadatas'][0][i]
-                matches.append({
-                    "source": "GitHub",
-                    "title": metadata.get('name', 'Unknown'),
-                    "url": metadata.get('url', '#'),
-                    "summary": results['documents'][0][i],
-                    "category": "cs.SE"
-                })
-        return matches
-    except Exception as e:
-        logger.error(f"Error querying local ChromaDB: {e}")
-        return []
+class ConceptPayload(BaseModel):
+    title: str = Field(..., description="Unique label identifying the structural template")
+    description: str = Field(..., description="Deep architectural synopsis, formulas, or runtime behaviors")
+    domain_context: str = Field(..., description="Primary vertical (e.g., Computer Science, Marine Biology)")
 
 # -------------------------------------------------------------------------
 # MCP RESOURCES
@@ -246,7 +71,7 @@ def get_metaphor_canvas() -> Dict[str, Any]:
     nodes = []
     edges = []
     
-    # 1. Add center node (the user query intent)
+    # Add root query node
     nodes.append({
         "id": "root-query",
         "label": f"Intent: '{query[:25]}...'",
@@ -255,13 +80,12 @@ def get_metaphor_canvas() -> Dict[str, Any]:
         "color": "#FF3366"
     })
     
-    # 2. Add matched results nodes and edge linkages
+    # Add matches nodes and edge links
     for i, match in enumerate(matches):
         node_id = f"node-{i}"
         source = match.get("source", "Unknown Source")
         title = match.get("title", f"Result {i}")
         
-        # Color nodes depending on source class (Direct CS vs. Biology/Mechanics)
         is_cs = any(domain in source.lower() for domain in ["github", "cs.", "computer science"])
         node_color = "#3399FF" if is_cs else "#33FF99"
         
@@ -273,7 +97,6 @@ def get_metaphor_canvas() -> Dict[str, Any]:
             "color": node_color
         })
         
-        # Map physical edges with cognitive distance representing spatial layout tension
         cognitive_tension = 0.1 if is_cs else (0.4 + (i * 0.15))
         edges.append({
             "source": "root-query",
@@ -310,100 +133,37 @@ async def search_knowledge_grid(
         mode: 'target' (direct operational relevance) or 'discovery' (far-fetched structural anomalies).
         cognitive_distance: 0.0 to 1.0. High float forces the search into structurally parallel but keyword-disjoint domains.
     """
-    logger.info(f"Executing search grid query. Mode: {mode}, Distance Scale: {cognitive_distance}")
+    logger.info(f"Executing search grid query via MCP: {query}")
     global LAST_SEARCH
     
     normalized_mode = mode.lower().strip()
     
     if normalized_mode == "target":
-        local_repos = query_local_db(query, n_results=3)
-        arxiv_papers = search_arxiv(query, max_results=3)
-        all_matches = local_repos + arxiv_papers
-        
-        # Save to cache for the Metaphor Canvas resource
+        matches = search_engine.search_target(query)
         LAST_SEARCH = {
             "query": query,
             "mode": "target",
-            "matches": all_matches
+            "matches": matches
         }
-        
         return {
             "status": "success",
             "mode": "target",
-            "matches": all_matches
+            "matches": matches
         }
         
     elif normalized_mode == "discovery":
-        # 1. Fetch arXiv papers, but filter out Computer Science ('cs.*') categories
-        raw_papers = search_arxiv(query, max_results=6)
-        filtered_papers = []
-        for paper in raw_papers:
-            category = paper.get("category", "")
-            # Apply Inverse-Similarity Filter: Ignore CS clusters to escape domain bubbles
-            if category.startswith("cs."):
-                logger.info(f"Skipping CS paper '{paper['title']}' (Category: {category}) in Discovery Mode.")
-                continue
-            filtered_papers.append(paper)
-            
-        # 2. Check local catalog of cross-domain analogs using keyword extraction
-        query_lower = query.lower()
-        analog_matches = []
-        for analog in CROSS_DOMAIN_ANALOGS:
-            if any(keyword in query_lower for keyword in analog["keywords"]):
-                analog_matches.append(analog)
-                
-        # If no explicit keyword matches, fill with the highest-matching analog slots
-        if not analog_matches:
-            analog_matches = CROSS_DOMAIN_ANALOGS[:2]
-            
-        # Combine findings
-        matches = []
-        for paper in filtered_papers[:3]:
-            matches.append({
-                "source": f"arXiv ({paper['category']})",
-                "title": paper["title"],
-                "url": paper["url"],
-                "abstract": paper["summary"],
-                "type": "Cross-Domain Research Paper"
-            })
-            
-        for analog in analog_matches:
-            catalyst_prompt = (
-                f"ACT AS A CONCEPTUAL TRANSLATOR & CROSS-DOMAIN CONSULTANT.\n"
-                f"The user wanted to build: '{query}'.\n"
-                f"We discovered a structurally parallel system in Y ({analog['domain']}): '{analog['title']}'.\n"
-                f"Explain the hidden bridge: how applying the mechanism of '{analog['latent_mechanism']}' "
-                f"to '{query}' unlocks a novel architectural paradigm. Output your analysis using the format:\n"
-                f"1. **The Hidden Bridge**: Map Y's physical/biological dynamics directly to X.\n"
-                f"2. **Architectural Grafting**: Concrete steps to implement Y's rules in X's database/software context.\n"
-                f"3. **Unlocked Potential**: What performance or design limits this improves (e.g. 10x throughput, lock evasion)."
-            )
-            
-            matches.append({
-                "source": analog["source"],
-                "domain": analog["domain"],
-                "title": analog["title"],
-                "latent_mechanism": analog["latent_mechanism"],
-                "fit_analogy": analog["fit_analogy"],
-                "summary": analog["summary"],
-                "type": "Cross-Domain Analogy",
-                "bridge_catalyst_prompt": catalyst_prompt
-            })
-            
-        # Save to cache for the Metaphor Canvas resource
+        matches = search_engine.search_discovery(query, cognitive_distance)
         LAST_SEARCH = {
             "query": query,
             "mode": "discovery",
             "matches": matches
         }
-            
         return {
-            "status": "success", 
-            "mode": "discovery", 
+            "status": "success",
+            "mode": "discovery",
             "applied_cognitive_distance": cognitive_distance,
             "matches": matches
         }
-    
     else:
         return {"status": "error", "message": f"Invalid mode configuration parameter: '{mode}'"}
 
@@ -429,7 +189,6 @@ async def breed_concepts(
     
     hybrid_paradigm = f"{name_b}-Infused {name_a} Architecture"
     
-    # Mathematical Grafting selection
     graft_math = (
         r"S_c = \sum_{i=1}^{n} (\vec{V}_{A,i} \cdot \vec{V}_{B,i}) \times \gamma^{\Delta t}"
         if "decay" in desc_b.lower() or "cache" in desc_a.lower() else
@@ -482,7 +241,6 @@ async def bridge_code_and_theory(
         paradigm = ""
         query_terms = ""
         
-        # Determine latent mathematical/theoretical model
         if any(kw in code_lower for kw in ["cas", "atomic", "lock", "thread", "concurrent"]):
             derived_math = r"L_{sync} = \min \left( \sum_{i=1}^{m} t_{wait,i} \right) \Rightarrow \text{Linearizability Bound}"
             paradigm = "Lock-Free Concurrent Consistency and Linearizability Bounds"
@@ -500,8 +258,7 @@ async def bridge_code_and_theory(
             paradigm = "Discrete Dynamical System State Models"
             query_terms = "dynamical system state"
             
-        # Fetch theoretical papers backing this code pattern
-        papers = search_arxiv(query_terms, max_results=3)
+        papers = search_engine.arxiv_client.search(query_terms, max_results=3)
         
         return {
             "translation_direction": "Code to Theory",
@@ -519,19 +276,16 @@ async def bridge_code_and_theory(
         logic_brief = ""
         
         if "e^{-" in formula_lower or "lambda" in formula_lower or "decay" in formula_lower:
-            # Matches decay/eviction rules -> Caching repos
-            mapped_repos = [repo for repo in MOCK_REPOS if repo["title"] in ["CacheGraphene", "ShedValve"]]
+            mapped_repos = [repo for repo in search_engine.mock_repos if repo["title"] in ["CacheGraphene", "ShedValve"]]
             logic_brief = "Implement using an atomic ticker index and thread-safe hash eviction buffers."
         elif "sum" in formula_lower or "vec" in formula_lower or "cdot" in formula_lower:
-            # Matches vector calculation/search -> Search & perturbation repos
-            mapped_repos = [repo for repo in MOCK_REPOS if repo["title"] in ["CacheGraphene", "SecurInvert"]]
+            mapped_repos = [repo for repo in search_engine.mock_repos if repo["title"] in ["CacheGraphene", "SecurInvert"]]
             logic_brief = "Implement using multi-dimensional array math (numpy/broadcasting) or hardware SIMD dot products."
         elif "lim" in formula_lower or "delta" in formula_lower or "mesh" in formula_lower:
-            # Matches network mesh routing -> Routing repos
-            mapped_repos = [repo for repo in MOCK_REPOS if repo["title"] in ["MeshFlow"]]
+            mapped_repos = [repo for repo in search_engine.mock_repos if repo["title"] in ["MeshFlow"]]
             logic_brief = "Implement using priority queues and dynamic node graph weight adjustments."
         else:
-            mapped_repos = MOCK_REPOS[:2]
+            mapped_repos = search_engine.mock_repos[:2]
             logic_brief = "Implement using standard non-blocking queues or loop states."
             
         return {
@@ -540,7 +294,6 @@ async def bridge_code_and_theory(
             "software_implementation_logic": logic_brief,
             "matched_codebase_templates": mapped_repos
         }
-        
     else:
         return {
             "status": "error",
@@ -559,7 +312,6 @@ async def assess_viability(system_design: str) -> Dict[str, Any]:
     design_lower = system_design.lower()
     active_conflicts = []
     
-    # Check for database sharding / partitioning overlap
     if "shard" in design_lower or "partition" in design_lower:
         active_conflicts.append({
             "patent_id": "US-8910231-B2",
@@ -571,7 +323,6 @@ async def assess_viability(system_design: str) -> Dict[str, Any]:
             "Implement a partition pattern mapped strictly to time-slice write density variables. "
             "This routes execution clear of the patent's structural vector boundaries while retaining scale features."
         )
-    # Check for thread-safe lock caching
     elif "cache" in design_lower or "evict" in design_lower:
         active_conflicts.append({
             "patent_id": "US-9876543-B2",
@@ -605,133 +356,78 @@ async def write_scaffolding_files(
     Automated project bootstrapper. Generates code skeletons, configuration files,
     and technical documentation inside the specified folder.
     """
-    logger.info(f"Scaffolding project inside directory: {project_directory}")
-    
-    # Resolve directory path
-    base_path = Path(project_directory).resolve()
-    os.makedirs(base_path, exist_ok=True)
-    
-    payload = synthesis_output.get("synthesis_payload", {})
-    p_name = payload.get("paradigm_name", "Cross-Domain Hybrid Prototype")
-    bridge = payload.get("structural_bridge", "No bridge data available.")
-    mechanics = payload.get("hybrid_mechanics", "No operational mechanics specified.")
-    math_formula = payload.get("mathematical_grafting_formula", "S_c = f(A, B)")
-    tradeoffs = payload.get("critical_tradeoffs", [])
-    
-    tradeoffs_md = "\n".join([f"* **Risk:** {t}" for t in tradeoffs])
-    
-    # 1. Write README.md
-    readme_content = f"""# {p_name.upper()}
+    return scaffolder.scaffold(synthesis_output, project_directory)
 
-## Conceptual Bridge
-{bridge}
-
-## Operational Mechanics
-{mechanics}
-
-## Mathematical Foundation
-$${math_formula}$$
-
-## System Risks
-{tradeoffs_md}
-
----
-*Generated by Ideation GOAT Scaffolder.*
-"""
-    
-    readme_path = base_path / "README.md"
-    with open(readme_path, "w", encoding="utf-8") as f:
-        f.write(readme_content)
-        
-    # 2. Write math_engine.py
-    engine_content = f'''"""
-Mathematical Engine for {p_name}
-Formula: {math_formula}
-"""
-import math
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("MathEngine")
-
-def calculate_graft_metrics(v_a: list, v_b: list, delta_t: float, gamma: float = 0.95) -> float:
+@mcp.tool()
+async def verify_workspace_fit(repo_name: str, workspace_path: str = ".") -> str:
     """
-    Computes convergence/decay across distinct domain spaces.
-    LaTeX Formula: {math_formula}
-    """
-    logger.info("Initializing convergence calculations.")
-    try:
-        # Dot product calculation
-        dot_product = sum(a * b for a, b in zip(v_a, v_b))
-        decay_factor = math.pow(gamma, delta_t)
-        score = dot_product * decay_factor
-        return score
-    except Exception as e:
-        logger.error(f"Error during calculation loop: {{e}}")
-        return 0.0
-'''
+    Verify if a target GitHub repository is a good technical and legal fit for the local workspace.
+    Checks the local project language/ecosystem and license, then compares them against the target repository.
     
-    engine_path = base_path / "math_engine.py"
-    with open(engine_path, "w", encoding="utf-8") as f:
-        f.write(engine_content)
-        
-    # 3. Write state_buffer.py
-    buffer_content = f'''"""
-State Buffer & Eviction Registry for {p_name}
-"""
-import time
-from typing import Dict, Any, Optional
+    Parameters:
+    - repo_name (str): The full GitHub repository name (e.g. 'psf/requests').
+    - workspace_path (str): Path to the local workspace to scan (defaults to '.').
+    """
+    return workspace_analyzer.verify_workspace_fit(repo_name, workspace_path)
 
-class StateBuffer:
+@mcp.tool()
+async def compose_solution_stack(query: str, n_results: int = 3) -> str:
     """
-    Non-blocking state storage structure utilizing dynamic eviction rules.
-    """
-    def __init__(self):
-        self.registry: Dict[str, Any] = {{}}
-        self.write_rates: Dict[str, float] = {{}}
-        
-    def register_state(self, key: str, payload: Any):
-        """
-        Saves key payload and increments local traffic density coordinates.
-        """
-        self.registry[key] = payload
-        self.write_rates[key] = self.write_rates.get(key, 0.0) + 1.0
-        
-    def check_eviction(self) -> Optional[str]:
-        """
-        Determines eviction candidate based on dynamic thresholds.
-        """
-        if not self.registry:
-            return None
-        candidate = min(self.write_rates, key=self.write_rates.get)
-        return candidate
-'''
+    Decompose a complex system idea into multiple architectural layers and query the database
+    to compose a cohesive solution stack of open-source frameworks.
     
-    buffer_path = base_path / "state_buffer.py"
-    with open(buffer_path, "w", encoding="utf-8") as f:
-        f.write(buffer_content)
-        
-    # 4. Write requirements.txt
-    req_content = "pydantic>=2.0.0\n"
-    req_path = base_path / "requirements.txt"
-    with open(req_path, "w", encoding="utf-8") as f:
-        f.write(req_content)
-        
-    return {
-        "status": "success",
-        "scaffold_directory": str(base_path),
-        "files_created": [
-            "README.md",
-            "math_engine.py",
-            "state_buffer.py",
-            "requirements.txt"
-        ],
-        "instruction": "Open the directory in your workspace and trigger the implementation agent on the generated skeleton."
-    }
+    Parameters:
+    - query (str): The product idea or requirements (e.g. 'secure local-first mobile app with sync').
+    - n_results (int): Number of top matches to find per layer (default: 3).
+    """
+    return search_engine.compose_solution_stack(query, n_results)
+
+@mcp.tool()
+async def get_repo_health(repo_name: str) -> str:
+    """
+    Fetch real-time health, activity telemetry, and security vulnerabilities for a target GitHub repository.
+    Queries the GitHub API and the OSV.dev vulnerability database.
+    
+    Parameters:
+    - repo_name (str): The full GitHub repository name (e.g. 'encode/django-rest-framework').
+    """
+    return repo_profiler.get_repo_health(repo_name)
+
+@mcp.tool()
+async def profile_repo_hardware_footprint(
+    repo_name: str, 
+    target_hardware: str, 
+    sram_limit_kb: float = 256.0, 
+    flash_limit_kb: float = 1024.0
+) -> str:
+    """
+    Profile the structural and resource footprint of a target repository against edge hardware limits.
+    Analyzes project layout, file extensions, and dependency weight.
+    
+    Parameters:
+    - repo_name (str): The full GitHub repository name (e.g. 'lvgl/lvgl').
+    - target_hardware (str): The name of your microcontroller/hardware board (e.g. 'ESP32', 'STM32', 'Arduino').
+    - sram_limit_kb (float): SRAM memory limit of your board in KB (default: 256.0).
+    - flash_limit_kb (float): Flash storage limit of your board in KB (default: 1024.0).
+    """
+    return repo_profiler.profile_repo_hardware_footprint(
+        repo_name, target_hardware, sram_limit_kb, flash_limit_kb
+    )
+
+@mcp.tool()
+async def align_system_architecture(repo_name: str, workspace_path: str = ".") -> str:
+    """
+    Analyze the local workspace directory structure to detect its design pattern,
+    and output a detailed architectural alignment/integration report for the target repository.
+    
+    Parameters:
+    - repo_name (str): Proposed repository.
+    - workspace_path (str): Path to workspace (defaults to '.').
+    """
+    return workspace_analyzer.align_system_architecture(repo_name, workspace_path)
 
 # -------------------------------------------------------------------------
 # RUNNER INITIALIZATION ENTRYPOINT
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
-    # Launch standard FastMCP listening loops over stdio communication lines
     mcp.run()

@@ -77,14 +77,22 @@ The project has shifted from a visual Streamlit application to a pure **Model Co
 
 ---
 
-## 🚀 Running the Server Locally
+## 🚀 Running the Server & Tests
 
-Verify dependencies are installed:
+### 1. Verify Dependencies
+Ensure the dependencies are installed:
 ```bash
 pip install -r requirements.txt
 ```
 
-Launch the MCP server in `stdio` mode:
+### 2. Launch the MCP Server
+Launch the server in stdio mode:
 ```bash
 python server.py
+```
+
+### 3. Run High-Performance Unit Tests
+Execute the offline test suite (runs in less than 50 milliseconds using standard python library):
+```bash
+python -m unittest test_server.py
 ```
