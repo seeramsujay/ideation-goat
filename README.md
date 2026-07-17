@@ -23,85 +23,93 @@ Powered by **Gemini 3.1 Flash Lite** for high-speed structural reasoning, enforc
 ## 🏗️ System Architecture
 
 ```mermaid
-graph LR
-    %% ──────────────────────────────────────
-    %% STYLING
-    %% ──────────────────────────────────────
-    classDef client fill:#f3f4f6,stroke:#4b5563,stroke-width:2px
-    classDef core fill:#f3e8ff,stroke:#7c3aed,stroke-width:2px
-    classDef sec fill:#fee2e2,stroke:#dc2626,stroke-width:2px
-    classDef d1 fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px
-    classDef d2 fill:#ecfdf5,stroke:#059669,stroke-width:1.5px
-    classDef d3 fill:#fff7ed,stroke:#ea580c,stroke-width:1.5px
-    classDef db fill:#fef9c3,stroke:#ca8a04,stroke-width:2px
+graph TD
+    %% ═══════════════════════════════════════════════════
+    %% COLOUR CLASSES
+    %% ═══════════════════════════════════════════════════
+    classDef client   fill:#1e293b,stroke:#94a3b8,color:#f1f5f9,stroke-width:2px
+    classDef gateway  fill:#312e81,stroke:#818cf8,color:#e0e7ff,stroke-width:2px
+    classDef mw       fill:#4c1d95,stroke:#a78bfa,color:#ede9fe,stroke-width:2px
+    classDef brain    fill:#7c3aed,stroke:#c4b5fd,color:#fff,stroke-width:3px
+    classDef d1node   fill:#0c4a6e,stroke:#38bdf8,color:#e0f2fe,stroke-width:1.5px
+    classDef d2node   fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1.5px
+    classDef d3node   fill:#431407,stroke:#fb923c,color:#ffedd5,stroke-width:1.5px
+    classDef db       fill:#78350f,stroke:#fbbf24,color:#fef3c7,stroke-width:2px
 
-    %% ──────────────────────────────────────
-    %% CORE PIPELINE (flows left → right)
-    %% ──────────────────────────────────────
-    IDE["🖥️ IDE / AI Agent"]:::client
-    IDE -->|"JSON-RPC over stdio"| ZOD{"🛡️ Zod Validation\n& Auto-Healer"}:::core
-    ZOD --> JWT["🔐 JWT Identity\nSandbox"]:::sec
-    ZOD --> ORCH["🧠 Master\nOrchestrator"]:::core
-    ORCH --> ROUTER{"🔀 Domain\nRouter"}:::core
+    %% ═══════════════════════════════════════════════════
+    %% TIER 1 — HOST INGESTION LAYER
+    %% ═══════════════════════════════════════════════════
+    Client["🖥️  IDE Host · Claude Desktop · Custom AI Swarm"]:::client
+    Client -->|"stdio  ·  JSON-RPC 2.0"| Gateway["⚡ FastMCP Server  ·  JSON-RPC Stdio Gateway"]:::gateway
 
-    %% ──────────────────────────────────────
-    %% DOMAIN BRANCHES (stack top → bottom)
-    %% ──────────────────────────────────────
-    ROUTER -->|"Codebase & Infra"| D1
-    ROUTER -->|"Research & Papers"| D2
-    ROUTER -->|"Design & UI"| D3
+    %% ═══════════════════════════════════════════════════
+    %% TIER 2 — ENTERPRISE MIDDLEWARE
+    %% ═══════════════════════════════════════════════════
+    Gateway --> Sandbox{"🔐  Identity Sandbox\nJWT Verification · Scope Guard"}:::mw
+    Sandbox -->|"valid token"| Healer["🛡️  Parameter Auto-Healer\nZod Coercion · Typo Fuzzy-Match · Default Injection"]:::mw
+    Healer --> Brain
 
-    %% ──────────────────────────────────────
-    %% DOMAIN 1 — Codebase & Frameworks
-    %% 11 tools listed vertically
-    %% ──────────────────────────────────────
-    subgraph D1 ["📁 DOMAIN 1 — Codebase & Frameworks"]
+    %% ═══════════════════════════════════════════════════
+    %% TIER 3 — MASTER BRAIN
+    %% ═══════════════════════════════════════════════════
+    Brain(["🧠  Master Workflow Orchestrator\norchestrator.py"]):::brain
+
+    %% ═══════════════════════════════════════════════════
+    %% TIER 4a — DOMAIN 1: CODEBASE & FRAMEWORKS
+    %% ═══════════════════════════════════════════════════
+    Brain -->|"Codebase & Infra query"| D1
+
+    subgraph D1 ["📁  DOMAIN 1 — Codebase & Open Source Frameworks"]
         direction TB
-        AST["📂 AST & Dependency Scanner"]:::d1
-        GH["🐙 GitHub Registry Search"]:::d1
-        GL["🦊 GitLab Projects Search"]:::d1
-        HN["📰 Hacker News Sentiment Audit"]:::d1
-        CVE["🛡️ CVE Security Shield"]:::d1
-        LOCKIN["🔒 Vendor Lock-In Profiler"]:::d1
-        HEALTH["🩺 Repo Health & Bug Profiler"]:::d1
-        HW["🎛️ Edge Hardware Footprint Sizer"]:::d1
-        DI["💉 Dependency Injection Profiler"]:::d1
-        COST["💰 Cloud Cost Forecaster"]:::d1
-        DOCKER["🐳 Docker & Scaffold Synthesizer"]:::d1
+        D1_AST["📂  Local AST Scanner\npackage.json · requirements.txt · Cargo.toml"]:::d1node
+        D1_GH["🐙  GitHub Registry Search\nRepo match · Star velocity · PR activity"]:::d1node
+        D1_GL["🦊  GitLab Projects Integration\nGitLab API · cross-registry sourcing"]:::d1node
+        D1_HN["📰  Hacker News Sentiment Auditor\nReal-time developer mention trends"]:::d1node
+        D1_CVE["🛡️  OSV.dev CVE Security Shield\nVulnerability scan · severity gates"]:::d1node
+        D1_LOCK["🔒  Ecosystem Lock-In Profiler\nAWS · GCP · Vercel · Portability Grade A–F"]:::d1node
+        D1_BUG["🩺  Chronic Bug Profiler\nTF-IDF issue clustering · recurring pitfalls"]:::d1node
+        D1_HW["🎛️  Edge Hardware Footprint Sizer\nSRAM · Flash · ESP32 · STM32 · Arduino"]:::d1node
+        D1_DI["💉  Dependency Injection Profiler\nDI pattern quality · coupling scorer"]:::d1node
+        D1_COST["💰  Cloud Cost Forecaster\nAWS · Vercel · Supabase · Neon estimates"]:::d1node
+        D1_DOCK["🐳  Docker & Scaffold Synthesizer\nDockerfile · docker-compose · .env.example"]:::d1node
+        D1_AST --> D1_GH --> D1_GL --> D1_HN --> D1_CVE
+        D1_CVE --> D1_LOCK --> D1_BUG --> D1_HW --> D1_DI --> D1_COST --> D1_DOCK
     end
 
-    %% ──────────────────────────────────────
-    %% DOMAIN 2 — Research & Papers
-    %% 4 tools listed vertically
-    %% ──────────────────────────────────────
-    subgraph D2 ["🔬 DOMAIN 2 — Research & Papers"]
+    D1_AST -.->|"vector index"| ChromaDB[("🗄️  ChromaDB\nVector Store")]:::db
+    D1_GH  -.->|"embed repos"| ChromaDB
+
+    %% ═══════════════════════════════════════════════════
+    %% TIER 4b — DOMAIN 2: ACADEMIC & DEEP RESEARCH
+    %% ═══════════════════════════════════════════════════
+    Brain -->|"Research & theory query"| D2
+
+    subgraph D2 ["🔬  DOMAIN 2 — Academic & Deep Research Literature"]
         direction TB
-        ARXIV["📄 arXiv Preprints Client"]:::d2
-        SCHOLAR["🎓 Google Scholar Search"]:::d2
-        PATENTS["⚖️ Google Patents IP Claims"]:::d2
-        BRIDGE["🔄 Code ↔ Theory Translator"]:::d2
+        D2_ARX["📄  arXiv Preprint Engine\nAtom XML · retry backoff · category filter"]:::d2node
+        D2_SCH["🎓  Google Scholar Literature Client\nCitation counts · abstract summaries"]:::d2node
+        D2_PAT["⚖️  Google Patents IP Evasion Tool\nCollision detection · defensive strategy"]:::d2node
+        D2_BRG["🔄  Code ↔ Theory Bidirectional Translator\nCode → LaTeX · LaTeX → software template"]:::d2node
+        D2_ARX --> D2_SCH --> D2_PAT --> D2_BRG
     end
 
-    %% ──────────────────────────────────────
-    %% DOMAIN 3 — Design & UI
-    %% 5 tools listed vertically
-    %% ──────────────────────────────────────
-    subgraph D3 ["🎨 DOMAIN 3 — Design & UI"]
+    %% ═══════════════════════════════════════════════════
+    %% TIER 4c — DOMAIN 3: VISUAL DESIGN & UI CANVAS
+    %% ═══════════════════════════════════════════════════
+    Brain -->|"Design & UI query"| D3
+
+    subgraph D3 ["🎨  DOMAIN 3 — Visual Design & Frontend Canvas"]
         direction TB
-        CANVAS["🌌 Metaphor Canvas"]:::d3
-        BREED["🧬 Concept Hybridization Engine"]:::d3
-        WIDGETS["⚛️ @nitrostack/widgets Renderer"]:::d3
-        AWWWARDS["🏆 Awwwards Design Reference"]:::d3
-        DRIBBBLE["🎯 Dribbble Moodboard Canvas"]:::d3
+        D3_CAN["🌌  Metaphor Canvas Node Graph\nideation-goat://canvas  ·  cognitive-distance edges"]:::d3node
+        D3_HYB["🧬  Concept Hybridization Engine\nCross-domain analogy · LaTeX formula · catalyst prompt"]:::d3node
+        D3_AWW["🏆  Awwwards Design Scraper\nPremium UI pattern references"]:::d3node
+        D3_DRI["🎯  Dribbble Palette Harvester\nColour system · layout moodboards"]:::d3node
+        D3_WID["⚛️  @nitrostack/widgets Renderer Panel\nHealth Dashboard · Design Moodboard widgets"]:::d3node
+        D3_CAN --> D3_HYB --> D3_AWW --> D3_DRI --> D3_WID
     end
 
-    %% ──────────────────────────────────────
-    %% DATA STORES
-    %% ──────────────────────────────────────
-    AST -.-> CHROMA[("🗄️ ChromaDB\nVector Store")]:::db
-    GH -.-> CHROMA
-    ORCH -.-> CACHE[("💾 Session\nCache")]:::db
-    CANVAS -.-> CACHE
+    D3_CAN -.->|"cache graph"| SessionCache[("💾  In-Memory\nSession Cache")]:::db
+    Brain  -.->|"pipeline state"| SessionCache
 ```
 
 ---
