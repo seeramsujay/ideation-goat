@@ -140,6 +140,9 @@ def analyze_workspace(workspace_path: str = None) -> Dict[str, Any]:
     for root, dirs, files in os.walk(workspace_path):
         # Exclude node_modules, venv, .git, chroma_data
         dirs[:] = [d for d in dirs if d not in ["node_modules", "venv", ".venv", ".git", "__pycache__", "chroma_data", "dist", "build"]]
+        if files_checked >= 30:
+            dirs[:] = []
+            break
         for file in files:
             if files_checked >= 30:
                 break

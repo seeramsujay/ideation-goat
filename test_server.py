@@ -20,7 +20,11 @@ from server import (
     get_repo_health,
     profile_repo_hardware_footprint,
     align_system_architecture,
-    search_academic_papers
+    search_academic_papers,
+    analyze_workspace_ast,
+    check_repo_health as server_check_repo_health,
+    check_ecosystem_lockin as server_check_ecosystem_lockin,
+    analyze_repo_bugs as server_analyze_repo_bugs
 )
 
 # -------------------------------------------------------------------------
@@ -509,6 +513,75 @@ class TestIdeationGoatServer(unittest.TestCase):
             self.assertEqual(res["status"], "success")
             self.assertEqual(len(res["arxiv_results"]), 1)
             self.assertEqual(len(res["scholar_results"]), 1)
+
+    def test_analyze_workspace_ast(self):
+        loop = asyncio.get_event_loop()
+        res = loop.run_until_complete(
+            analyze_workspace_ast(workspace_path=".")
+        )
+        self.assertIn("Workspace AST & Architecture Profile", res)
+        self.assertIn("Python", res)
+
+    @patch("server.analyze_repo_health")
+    def test_check_repo_health_tool(self, mock_analyze):
+        mock_analyze.return_value = {
+            "health_score": 90,
+            "status": "Healthy",
+            "flags": [],
+            "metrics": {
+                "repo": "psf/requests",
+                "cve_count": 0,
+                "last_commit_date": "2026-07-09",
+                "contributors_count": 10,
+                "archived": False
+            }
+        }
+        loop = asyncio.get_event_loop()
+        res = loop.run_until_complete(
+            server_check_repo_health(repository="psf/requests")
+        )
+        self.assertIn("Open-Source Health & Tech Debt Audit", res)
+        self.assertIn("90 / 100", res)
+        self.assertIn("Healthy", res)
+
+    @patch("server.run_lockin_profiler")
+    def test_check_ecosystem_lockin_tool(self, mock_lockin):
+        mock_lockin.return_value = {
+            "repo": "psf/requests",
+            "portability_grade": "A",
+            "total_dependencies_checked": 0,
+            "locked_dependencies": [],
+            "summary": "This framework earns a Grade A for portability."
+        }
+        loop = asyncio.get_event_loop()
+        res = loop.run_until_complete(
+            server_check_ecosystem_lockin(repository="psf/requests")
+        )
+        self.assertIn("Ecosystem Lock-In & Portability Profile", res)
+        self.assertIn("- **Portability Grade:** `A`", res)
+
+    @patch("server.run_bug_profiler")
+    def test_analyze_repo_bugs_tool(self, mock_bugs):
+        mock_bugs.return_value = {
+            "repo": "psf/requests",
+            "total_analyzed_issues": 10,
+            "risk_level": "Low",
+            "top_pitfalls": [
+                {
+                    "label": "Connection timeout issues",
+                    "percentage": 20.0,
+                    "count": 2,
+                    "example_issues": ["Timeout when fetching large file"],
+                    "is_critical": False
+                }
+            ]
+        }
+        loop = asyncio.get_event_loop()
+        res = loop.run_until_complete(
+            server_analyze_repo_bugs(repository="psf/requests")
+        )
+        self.assertIn("Chronic Bug Profiler & Issue Landscape", res)
+        self.assertIn("Connection timeout issues", res)
 
 if __name__ == "__main__":
     unittest.main()

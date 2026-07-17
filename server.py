@@ -12,6 +12,13 @@ from scaffolder import ProjectScaffolder
 from workspace_analyzer import WorkspaceAnalyzer
 from repo_profiler import RepoProfiler
 
+# --- LOCHAN'S WORK START: Modular Analyzer Imports ---
+from analyzers.workspace_analyzer import analyze_workspace
+from analyzers.health_analyzer import analyze_repo_health
+from analyzers.lockin_profiler import check_ecosystem_lockin as run_lockin_profiler
+from analyzers.bug_profiler import analyze_repo_bugs as run_bug_profiler
+# --- LOCHAN'S WORK END ---
+
 # -------------------------------------------------------------------------
 # STDOUT PROTECTIVE LOGGING SETUP
 # -------------------------------------------------------------------------
@@ -468,6 +475,124 @@ async def align_system_architecture(repo_name: str, workspace_path: str = ".") -
     - workspace_path (str): Path to workspace (defaults to '.').
     """
     return workspace_analyzer.align_system_architecture(repo_name, workspace_path)
+
+# --- LOCHAN'S WORK START: Modular MCP Tools ---
+@mcp.tool()
+async def analyze_workspace_ast(workspace_path: Optional[str] = None) -> str:
+    """
+    Zero-friction local workspace AST & dependency analyzer.
+    Reads local configuration files (package.json, pyproject.toml, Cargo.toml, go.mod) and scans source imports
+    to identify the user's active tech stack without needing external tokens.
+    
+    Parameters:
+    - workspace_path (str): Optional path to the local project directory. Defaults to current working directory.
+    """
+    profile = analyze_workspace(workspace_path)
+    if "error" in profile:
+        return f"Error analyzing workspace AST: {profile['error']}"
+        
+    output = [
+        f"### 📁 Workspace AST & Architecture Profile (`{profile['path']}`)",
+        f"- **Primary Language Detected:** `{profile['primary_language']}`",
+        f"- **All Languages Detected:** `{', '.join(profile['languages_detected']) if profile['languages_detected'] else 'None'}`",
+        f"- **Frameworks & Core Libraries:** `{', '.join(profile['frameworks_detected']) if profile['frameworks_detected'] else 'None'}`",
+        f"- **Build Tools:** `{', '.join(profile['build_tools']) if profile['build_tools'] else 'None'}`",
+        f"- **Total Dependencies Parsed:** {len(profile['dependencies'])} packages (`{', '.join(profile['dependencies'][:15])}...`)"
+    ]
+    return "\n".join(output)
+
+@mcp.tool()
+async def check_repo_health(repository: str) -> str:
+    """
+    Automated supply-chain risk and maintenance health auditor for any GitHub repository.
+    Queries OSV.dev vulnerability databases and commit/maintainer activity over unauthenticated/read-only APIs.
+    
+    Parameters:
+    - repository (str): Repository full name (e.g. 'fastapi/fastapi' or 'expressjs/express') or URL.
+    """
+    health = analyze_repo_health(repository)
+    metrics = health.get("metrics", {})
+    
+    output = [
+        f"### 🩺 Open-Source Health & Tech Debt Audit (`{metrics.get('repo', repository)}`)",
+        f"- **Composite Health Score:** `{health.get('health_score', 0)} / 100` ({health.get('status', 'Unknown')})",
+        f"- **Known OSV.dev Vulnerabilities (CVEs):** `{metrics.get('cve_count', 0)}`",
+        f"- **Last Commit / Push Date:** `{metrics.get('last_commit_date', 'Unknown')}`",
+        f"- **Active Contributors:** `{metrics.get('contributors_count', 1)}+`",
+        f"- **Archived Status:** `{metrics.get('archived', False)}`"
+    ]
+    
+    if health.get("flags"):
+        output.append("\n**⚠️ Risk Flags & Warnings:**")
+        for flag in health["flags"]:
+            output.append(f"- {flag}")
+    else:
+        output.append("\n✅ *No critical security vulnerabilities or inactivity risks flagged.*")
+        
+    return "\n".join(output)
+
+@mcp.tool()
+async def check_ecosystem_lockin(repository: str) -> str:
+    """
+    Deep dependency tree scanner that evaluates long-term cloud/ecosystem portability.
+    Identifies hard lock-in dependencies tied to proprietary cloud platforms (AWS, Vercel, GCP, Azure, Cloudflare).
+    
+    Parameters:
+    - repository (str): Repository full name (e.g. 'fastapi/fastapi' or 'vercel/next.js') or URL.
+    """
+    lockin = run_lockin_profiler(repository)
+    
+    output = [
+        f"### 🌐 Ecosystem Lock-In & Portability Profile (`{lockin.get('repo', repository)}`)",
+        f"- **Portability Grade:** `{lockin.get('portability_grade', 'Unknown')}`",
+        f"- **Total Dependencies Evaluated:** `{lockin.get('total_dependencies_checked', 0)}`",
+        f"\n**Summary:**\n{lockin.get('summary', '')}"
+    ]
+    
+    locked_deps = lockin.get("locked_dependencies", [])
+    if locked_deps:
+        output.append("\n**🔒 Locked Vendor Dependencies Found:**")
+        for ld in locked_deps:
+            output.append(f"- **`{ld['package']}`** → *{ld['vendor']}* ({ld['reason']})")
+    else:
+        output.append("\n✅ *Zero vendor lock-in dependencies found. Fully portable across self-hosted and multi-cloud environments.*")
+        
+    return "\n".join(output)
+
+@mcp.tool()
+async def analyze_repo_bugs(repository: str) -> str:
+    """
+    Semantic issue-clustering engine that surfaces chronic structural bugs and known pitfalls.
+    Fetches recent bug reports and runs TF-IDF / N-gram clustering analysis to find repeating pain points.
+    
+    Parameters:
+    - repository (str): Repository full name (e.g. 'pallets/flask' or 'facebook/react') or URL.
+    """
+    bugs = run_bug_profiler(repository)
+    total_analyzed = bugs.get("total_analyzed_issues", 0)
+    
+    if total_analyzed == 0:
+        return f"Could not fetch sufficient issue reports for `{repository}` (or repository has zero reported bugs)."
+        
+    output = [
+        f"### 🪲 Chronic Bug Profiler & Issue Landscape (`{bugs.get('repo', repository)}`)",
+        f"- **Total Recent Issues Analyzed:** `{total_analyzed}`",
+        f"- **Overall Bug Risk Level:** `{bugs.get('risk_level', 'Unknown')}`\n",
+        "**⚡ Top High-Frequency Pitfalls:**"
+    ]
+    
+    pitfalls = bugs.get("top_pitfalls", [])
+    for idx, p in enumerate(pitfalls):
+        icon = "🚨" if p.get("is_critical") else "ℹ️"
+        output.append(f"{idx+1}. {icon} **{p['label']}** (`{p['percentage']}%` of recent bug reports - {p['count']} occurrences)")
+        if p.get("example_issues"):
+            output.append(f"   *Examples:* \"{p['example_issues'][0]}\"")
+            if len(p['example_issues']) > 1:
+                output.append(f"               \"{p['example_issues'][1]}\"")
+        output.append("")
+        
+    return "\n".join(output)
+# --- LOCHAN'S WORK END ---
 
 # -------------------------------------------------------------------------
 # RUNNER INITIALIZATION ENTRYPOINT
