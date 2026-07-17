@@ -15,6 +15,14 @@ load_dotenv()
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 def get_github_client():
+    """
+    Initializes and returns a PyGithub client instance.
+    Checks for the GITHUB_TOKEN environment variable. If present, authenticates to allow higher
+    rate limits (5,000 requests/hr). Otherwise, defaults to anonymous access.
+    
+    Returns:
+        Github: An authenticated or unauthenticated Github client object.
+    """
     if not GITHUB_TOKEN:
         print("Warning: GITHUB_TOKEN not found in environment. Proceeding anonymously (limited rate limits).")
         return Github()
@@ -25,37 +33,66 @@ def get_github_client():
 g = get_github_client()
 
 def clean_markdown(text):
+    """
+    Cleans markdown formatting characters and metadata from raw README files.
+    This prepares the text for semantic embedding by stripping code blocks, inline styles,
+    headings syntax, badges, tables, and raw URL strings to reduce noise in vector space.
+
+    Args:
+        text (str): The raw markdown string to be cleaned.
+
+    Returns:
+        str: A clean, plain text representation of the markdown content.
+    """
     if not text:
         return ""
-    # Remove code blocks
+    # Remove code blocks (```code```)
     text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-    # Remove inline code
+    # Remove inline code (`code`)
     text = re.sub(r'`[^`]+`', '', text)
-    # Remove badges and images
+    # Remove badges and images (![alt](url))
     text = re.sub(r'!\[.*?\]\(.*?\)', '', text)
     # Convert markdown links [text](url) to just "text"
     text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
-    # Remove HTML tags
+    # Remove HTML tags (<tag>...</tag>)
     text = re.sub(r'<[^>]+>', '', text)
-    # Remove URLs
+    # Remove URLs (http://... or https://...)
     text = re.sub(r'http[s]?://\S+', '', text)
     # Remove headings syntax (#)
     text = re.sub(r'#+\s+', '', text)
     # Remove formatting characters like **, *, __, _
     text = re.sub(r'\*\*|__|\*|_', '', text)
-    # Remove table grid lines
+    # Remove table grid lines (|)
     text = re.sub(r'\|', ' ', text)
     # Remove leading dash/bullet indicators from lines
     text = re.sub(r'^\s*[-*+]\s+', '', text, flags=re.MULTILINE)
-    # Remove extra whitespace
+    # Remove extra whitespace and format to single line
     text = ' '.join(text.split())
     return text
 
 def chunk_text(text, max_words=500):
+    """
+    Splits a large block of text into smaller, contiguous chunks of words.
+    Helps satisfy LLM context limits and creates higher-precision vectors for retrieval.
+
+    Args:
+        text (str): Cleaned plain text to split.
+        max_words (int): Maximum word count per chunk.
+
+    Returns:
+        list of str: List of partitioned text chunks.
+    """
     words = text.split()
     return [' '.join(words[i:i + max_words]) for i in range(0, len(words), max_words)]
 
 def setup_database():
+    """
+    Connects to the local ChromaDB database.
+    Creates or retrieves the persistent collection where repository embeddings are stored.
+
+    Returns:
+        chromadb.Collection: The ChromaDB collection object for repository data.
+    """
     print("Connecting to local ChromaDB...")
     client = chromadb.PersistentClient(path="./chroma_data")
     default_ef = embedding_functions.DefaultEmbeddingFunction()
@@ -67,12 +104,22 @@ def setup_database():
     return collection
 
 def ingest_data(collection, language="Python", max_repos=50):
+    """
+    Crawls, processes, and embeds the top starred repositories for a given programming language.
+    Iterates through the search results from PyGithub, downloads README files, cleans them,
+    and upserts the generated chunks to the local vector database.
+
+    Args:
+        collection (chromadb.Collection): The destination ChromaDB collection.
+        language (str): Programming language filter for the GitHub search API.
+        max_repos (int): Maximum number of repositories to ingest.
+    """
     print(f"Fetching top {max_repos} starred {language} repositories...")
     
     query = f"stars:>1000 language:{language}"
     
     try:
-        # Sort by stars descending
+        # Sort by stars descending to fetch high-quality community frameworks
         repositories = g.search_repositories(query=query, sort="stars", order="desc")
         
         count = 0
@@ -98,7 +145,7 @@ def ingest_data(collection, language="Python", max_repos=50):
             cleaned_text = clean_markdown(readme_content)
             chunks = chunk_text(cleaned_text, max_words=500)
             
-            # We also want the repo's description
+            # Retrieve description to prepend to each chunk
             desc = repo.description or ""
             
             # Clear old chunks of this repository to prevent duplicates
@@ -108,13 +155,13 @@ def ingest_data(collection, language="Python", max_repos=50):
                 pass
             
             for idx, chunk in enumerate(chunks):
-                # To avoid saving meaningless small chunks
+                # Avoid saving meaningless, extremely small chunks
                 if len(chunk.split()) < 20: 
                     continue
                     
                 chunk_id = f"{repo.id}_chunk_{idx}"
                 
-                # Use description + chunk content as the document
+                # Combine description and README chunk for rich semantic context
                 document_text = f"{desc}. {chunk}"
                 
                 metadata = {

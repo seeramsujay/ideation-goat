@@ -19,6 +19,8 @@ from analyzers.lockin_profiler import check_ecosystem_lockin as run_lockin_profi
 from analyzers.bug_profiler import analyze_repo_bugs as run_bug_profiler
 # --- LOCHAN'S WORK END ---
 
+from orchestrator import WorkflowOrchestrator
+
 # -------------------------------------------------------------------------
 # STDOUT PROTECTIVE LOGGING SETUP
 # -------------------------------------------------------------------------
@@ -39,6 +41,7 @@ search_engine = CrossDomainSearchEngine()
 scaffolder = ProjectScaffolder()
 workspace_analyzer = WorkspaceAnalyzer()
 repo_profiler = RepoProfiler()
+orchestrator = WorkflowOrchestrator()
 
 # In-memory session cache for get_metaphor_canvas
 LAST_SEARCH = {
@@ -592,6 +595,135 @@ async def analyze_repo_bugs(repository: str) -> str:
         output.append("")
         
     return "\n".join(output)
+
+@mcp.tool()
+async def orchestrate_architectural_workflow(
+    query: str,
+    workspace_path: str = ".",
+    target_hardware: Optional[str] = None,
+    sram_limit_kb: float = 256.0,
+    flash_limit_kb: float = 1024.0,
+    scaffold_directory: Optional[str] = None
+) -> str:
+    """
+    Executes a multi-step analytical workflow:
+    1. Scan workspace AST for technologies/frameworks.
+    2. Search target repositories.
+    3. Compose dynamic solution stack layers.
+    4. Audit library health/CVE status.
+    5. Evaluate ecosystem lock-in dependencies.
+    6. Analyze chronic bugs and issue landscape.
+    7. Assess local workspace architectural fit/drift.
+    8. Estimate hardware constraint footprints (optional).
+    9. Scaffold starter blueprints in workspace (optional).
+
+    Parameters:
+    - query (str): Design paradigm or intent description.
+    - workspace_path (str): Root folder of local project (default: '.').
+    - target_hardware (str): Microcontroller board configuration for edge profile (optional).
+    - sram_limit_kb (float): Memory limitations of edge board in KB (default: 256.0).
+    - flash_limit_kb (float): Storage limitations of edge board in KB (default: 1024.0).
+    - scaffold_directory (str): Workspace subdirectory to write scaffold files (optional).
+    """
+    res = orchestrator.orchestrate_workflow(
+        query=query,
+        workspace_path=workspace_path,
+        target_hardware=target_hardware,
+        sram_limit_kb=sram_limit_kb,
+        flash_limit_kb=flash_limit_kb,
+        scaffold_directory=scaffold_directory
+    )
+    
+    lines = [
+        "## 🐐 Unified Orchestrated Analysis Report",
+        f"- **Intent Query:** `{query}`",
+        f"- **Workspace Path:** `{workspace_path}`",
+        f"- **Steps Completed:** {', '.join(res.get('steps_executed', []))}",
+        ""
+    ]
+    
+    if "workspace_ast" in res:
+        ast = res["workspace_ast"]
+        lines.extend([
+            "### 📁 Workspace AST Analysis",
+            f"- **Primary Language:** `{ast.get('primary_language', 'Unknown')}`",
+            f"- **Detected Languages:** `{', '.join(ast.get('languages_detected', []))}`",
+            f"- **Detected Frameworks:** `{', '.join(ast.get('frameworks_detected', []))}`",
+            f"- **Dependencies Count:** `{len(ast.get('dependencies', []))}`",
+            ""
+        ])
+    elif "workspace_ast_error" in res:
+        lines.extend([
+            "### 📁 Workspace AST Analysis",
+            f"⚠️ **Error:** {res['workspace_ast_error']}",
+            ""
+        ])
+
+    if "matched_repositories" in res:
+        lines.append("### 🔍 Target Repository Matches")
+        for idx, match in enumerate(res["matched_repositories"][:3]):
+            lines.append(f"{idx+1}. **{match.get('title', 'Unknown')}** ({match.get('source', 'Unknown')})")
+            if match.get("description"):
+                lines.append(f"   *Description:* {match['description']}")
+        lines.append("")
+
+    if "solution_stack_blueprint" in res:
+        lines.extend([
+            "### 🏗️ Solution Stack Blueprint",
+            res["solution_stack_blueprint"],
+            ""
+        ])
+
+    if "repo_health" in res:
+        health_data = res["repo_health"]
+        lines.extend([
+            "### 🩺 Pulse & Health Telemetry",
+            health_data.get("scorecard", ""),
+            ""
+        ])
+
+    if "ecosystem_lockin" in res:
+        lockin = res["ecosystem_lockin"]
+        lines.extend([
+            "### 🔒 Ecosystem Lock-in Profile",
+            f"- **Portability Grade:** `{lockin.get('portability_grade', 'Unknown')}`",
+            f"- **Summary:** {lockin.get('summary', '')}",
+            ""
+        ])
+
+    if "bug_profile" in res:
+        bp = res["bug_profile"]
+        lines.extend([
+            "### 🪲 Chronic Bug Profiler",
+            f"- **Risk Level:** `{bp.get('risk_level', 'Unknown')}`",
+            f"- **Total Issues Analyzed:** `{bp.get('total_analyzed_issues', 0)}`",
+            ""
+        ])
+
+    if "workspace_alignment" in res:
+        wa = res["workspace_alignment"]
+        lines.extend([
+            "### 🏛️ Workspace Alignment & Fit",
+            wa.get("compatibility_scorecard", ""),
+            wa.get("alignment_report", ""),
+            ""
+        ])
+
+    if "edge_hardware_profile" in res:
+        lines.extend([
+            "### 🎛️ Edge Hardware Profile",
+            res["edge_hardware_profile"],
+            ""
+        ])
+
+    if "scaffold_generation" in res:
+        lines.extend([
+            "### 🚀 Scaffold Generation",
+            f"Code skeleton generated successfully inside: `{scaffold_directory}`",
+            ""
+        ])
+        
+    return "\n".join(lines)
 # --- LOCHAN'S WORK END ---
 
 # -------------------------------------------------------------------------

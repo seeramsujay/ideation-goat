@@ -1,9 +1,8 @@
 {
   "mcpServers": {
     "ideation-goat": {
-      "command": "uv",
+      "command": "python",
       "args": [
-        "run",
         "server.py"
       ],
       "env": {

@@ -5,6 +5,14 @@ from chromadb.utils import embedding_functions
 # --- 1. SETUP THE VECTOR DATABASE ---
 @st.cache_resource
 def setup_database():
+    """
+    Sets up and configures the ChromaDB persistent vector database client.
+    Attempts to retrieve the existing 'github_repos' collection or creates it if it doesn't
+    yet exist. Relies on the default sentence-transformers embedding function.
+
+    Returns:
+        chromadb.Collection: The initialized database collection for querying.
+    """
     client = chromadb.PersistentClient(path="./chroma_data")
     default_ef = embedding_functions.DefaultEmbeddingFunction()
     

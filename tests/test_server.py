@@ -1,10 +1,14 @@
 import os
+import sys
 import asyncio
 import unittest
 from unittest.mock import patch, MagicMock
 from tempfile import TemporaryDirectory
 from pathlib import Path
 from typing import Dict, Any
+
+# Adjust path to import root modules properly
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Import the server tools and data structures to test
 import server
@@ -24,7 +28,8 @@ from server import (
     analyze_workspace_ast,
     check_repo_health as server_check_repo_health,
     check_ecosystem_lockin as server_check_ecosystem_lockin,
-    analyze_repo_bugs as server_analyze_repo_bugs
+    analyze_repo_bugs as server_analyze_repo_bugs,
+    orchestrate_architectural_workflow
 )
 
 # -------------------------------------------------------------------------
@@ -582,6 +587,75 @@ class TestIdeationGoatServer(unittest.TestCase):
         )
         self.assertIn("Chronic Bug Profiler & Issue Landscape", res)
         self.assertIn("Connection timeout issues", res)
+
+    def test_orchestrate_architectural_workflow_tool(self):
+        """
+        Verify that orchestrate_architectural_workflow calls the orchestrator
+        and correctly formats the dictionary report into a readable markdown summary.
+        """
+        mock_report = {
+            "query": "caching and eviction",
+            "status": "success",
+            "steps_executed": ["workspace_ast_scan", "target_search", "stack_composition"],
+            "workspace_ast": {
+                "primary_language": "Python",
+                "languages_detected": ["Python"],
+                "frameworks_detected": ["FastAPI"],
+                "dependencies": ["fastapi", "pydantic"]
+            },
+            "matched_repositories": [
+                {
+                    "title": "psf/requests",
+                    "source": "GitHub",
+                    "description": "Python HTTP for Humans."
+                }
+            ],
+            "solution_stack_blueprint": "Custom Stack: FastAPI + CacheGraphene",
+            "repo_health": {
+                "scorecard": "Vitality Score: 95 / 100",
+                "analysis": {}
+            }
+        }
+
+        with patch("server.orchestrator.orchestrate_workflow", return_value=mock_report):
+            loop = asyncio.get_event_loop()
+            res = loop.run_until_complete(
+                orchestrate_architectural_workflow(query="caching and eviction")
+            )
+            self.assertIn("Unified Orchestrated Analysis Report", res)
+            self.assertIn("FastAPI", res)
+            self.assertIn("psf/requests", res)
+            self.assertIn("Custom Stack: FastAPI + CacheGraphene", res)
+
+    def test_workflow_orchestrator_module_success(self):
+        """
+        Test the underlying WorkflowOrchestrator class logic.
+        Mocks individual analyzer/search steps to verify integration flows correctly.
+        """
+        from orchestrator import WorkflowOrchestrator
+        orchestrator_instance = WorkflowOrchestrator()
+
+        # Mock subcomponents to avoid HTTP hits or DB reads
+        with patch.object(orchestrator_instance.search_engine, "search_target", return_value=[{"title": "psf/requests", "source": "GitHub"}]), \
+             patch.object(orchestrator_instance.search_engine, "compose_solution_stack", return_value="Blueprint Stack"), \
+             patch("orchestrator.analyze_workspace", return_value={"primary_language": "Python", "languages_detected": ["Python"], "frameworks_detected": [], "dependencies": []}), \
+             patch("orchestrator.analyze_repo_health", return_value={"health_score": 90, "metrics": {"repo": "psf/requests"}}), \
+             patch.object(orchestrator_instance.repo_profiler, "get_repo_health", return_value="Scorecard"), \
+             patch("orchestrator.run_lockin_profiler", return_value={"repo": "psf/requests", "portability_grade": "A"}), \
+             patch("orchestrator.run_bug_profiler", return_value={"repo": "psf/requests", "total_analyzed_issues": 5}), \
+             patch.object(orchestrator_instance.workspace_analyzer, "verify_workspace_fit", return_value="Fit Scorecard"), \
+             patch.object(orchestrator_instance.workspace_analyzer, "align_system_architecture", return_value="Alignment Report"):
+
+            res = orchestrator_instance.orchestrate_workflow(
+                query="caching",
+                workspace_path=".",
+                target_hardware=None
+            )
+            self.assertEqual(res["status"], "success")
+            self.assertIn("workspace_ast_scan", res["steps_executed"])
+            self.assertIn("target_search", res["steps_executed"])
+            self.assertIn("repo_health_check", res["steps_executed"])
+            self.assertEqual(res["workspace_ast"]["primary_language"], "Python")
 
 if __name__ == "__main__":
     unittest.main()
