@@ -1,7 +1,7 @@
 <div align="center">
   <img src="logo.png" alt="Ideation Goat Logo" width="200" height="200">
   <h1>Ideation Goat</h1>
-  <p><strong>Find your next framework not by keywords, but by <em>original intent</em>.</strong></p>
+  <p><strong>Find your next framework or research paper not by keywords, but by <em>original intent</em>.</strong></p>
   
   <p>
     <img src="https://img.shields.io/badge/Python-3.9+-blue.svg" alt="Python Version">
@@ -14,14 +14,15 @@
 ---
 
 ## 🧠 The Problem
-Traditional GitHub search relies on keywords. If you search for "fast backend with login", you might miss a revolutionary repository called "HyperVault" simply because it doesn't use your specific keywords in its title or tags. 
+Traditional search tools rely on keywords. If you search for "fast backend with login", you might miss a revolutionary repository called "HyperVault" simply because it doesn't use your specific keywords in its title or tags. Similarly, finding relevant scientific papers is often hindered by jargon and exact phrasing.
 
-**Ideation Goat** uses Semantic Search (Vector Embeddings) to understand the *meaning* of your request, matching it against the deep technical context found in thousands of repository READMEs.
+**Ideation Goat** uses Semantic Search (Vector Embeddings) to understand the *meaning* of your request, matching it against the deep technical and theoretical context found in thousands of repository READMEs, Google Scholar profiles, and arXiv papers.
 
 ## ✨ Features
-- **Semantic Mapping**: Uses the `all-MiniLM-L6-v2` model to map natural language ideas to the high-dimensional vector space of GitHub descriptions.
+- **Semantic Mapping**: Uses the `all-MiniLM-L6-v2` model to map natural language ideas to the high-dimensional vector space of GitHub descriptions and research paper abstracts.
+- **Multi-Source Search**: Matches intent against both active open-source software and academic research papers (Google Scholar and arXiv).
 - **Persistent Local Intelligence**: Powered by ChromaDB for local vector storage—no cloud required for MVP.
-- **Intelligent Ingestion**: A dedicated pipeline that cleans markdown, removes noisy badges, and chunks READMEs to capture the "soul" of an idea.
+- **Intelligent Ingestion**: A dedicated pipeline that cleans markdown, removes noisy badges, chunks READMEs, and parses paper content to capture the "soul" of an idea.
 - **Language Filtering**: Multi-dimensional filtering to find the right tool in the right ecosystem (Python, Rust, etc.).
 
 ## 🚀 Getting Started
