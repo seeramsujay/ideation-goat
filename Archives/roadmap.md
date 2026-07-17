@@ -1,4 +1,4 @@
-# **Semantic GitHub Idea Matcher: Development Roadmap**
+# **Ideation Goat: Development Roadmap**
 
 This roadmap takes the project from a local prototype to a scalable, production-ready web application. It follows a "Lean" approach: build the core value first, then scale the infrastructure.
 

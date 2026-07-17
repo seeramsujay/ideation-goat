@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="logo.png" alt="GitHub Idea Matcher Logo" width="200" height="200">
-  <h1>GitHub Idea Matcher</h1>
+  <img src="logo.png" alt="Ideation Goat Logo" width="200" height="200">
+  <h1>Ideation Goat</h1>
   <p><strong>Find your next framework not by keywords, but by <em>original intent</em>.</strong></p>
   
   <p>
@@ -16,7 +16,7 @@
 ## 🧠 The Problem
 Traditional GitHub search relies on keywords. If you search for "fast backend with login", you might miss a revolutionary repository called "HyperVault" simply because it doesn't use your specific keywords in its title or tags. 
 
-**GitHub Idea Matcher** uses Semantic Search (Vector Embeddings) to understand the *meaning* of your request, matching it against the deep technical context found in thousands of repository READMEs.
+**Ideation Goat** uses Semantic Search (Vector Embeddings) to understand the *meaning* of your request, matching it against the deep technical context found in thousands of repository READMEs.
 
 ## ✨ Features
 - **Semantic Mapping**: Uses the `all-MiniLM-L6-v2` model to map natural language ideas to the high-dimensional vector space of GitHub descriptions.
@@ -31,8 +31,8 @@ Ensure you have Python 3.9+ installed on your test machine. Note: This project i
 
 ### 2. Installation
 ```bash
-git clone https://github.com/suzaykid/github-semantic-searcher.git
-cd github-semantic-searcher
+git clone https://github.com/suzaykid/ideation-goat.git
+cd ideation-goat
 pip install -r requirements.txt
 ```
 
@@ -75,10 +75,10 @@ Add the following configuration to your `claude_desktop_config.json` (usually lo
 ```json
 {
   "mcpServers": {
-    "github-idea-matcher": {
-      "command": "/home/suzaykid/Projects/github-semantic-searcher/.gss/bin/python",
+    "ideation-goat": {
+      "command": "/home/suzaykid/Projects/ideation-goat/.gss/bin/python",
       "args": [
-        "/home/suzaykid/Projects/github-semantic-searcher/mcp_server.py"
+        "/home/suzaykid/Projects/ideation-goat/mcp_server.py"
       ],
       "env": {
         "GITHUB_TOKEN": "your_github_personal_access_token"
