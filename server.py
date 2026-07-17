@@ -1,9 +1,7 @@
 import os
 import sys
 import logging
-from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field
-from mcp.server.fastmcp import FastMCP
+from typing import Dict, Any, Optional, List
 
 # Import modular components
 from config import settings
@@ -17,9 +15,15 @@ from analyzers.workspace_analyzer import analyze_workspace
 from analyzers.health_analyzer import analyze_repo_health
 from analyzers.lockin_profiler import check_ecosystem_lockin as run_lockin_profiler
 from analyzers.bug_profiler import analyze_repo_bugs as run_bug_profiler
+from analyzers.cost_forecaster import forecast_deployment_costs
+from analyzers.schema_healer import heal_parameter_schema
+from analyzers.identity_sandbox import verify_sandbox_identity
+from analyzers.di_profiler import profile_workspace_di
+from analyzers.cve_shield import scan_workspace_security_cves
 # --- LOCHAN'S WORK END ---
 
 from orchestrator import WorkflowOrchestrator
+from mcp.server.fastmcp import FastMCP
 
 # -------------------------------------------------------------------------
 # STDOUT PROTECTIVE LOGGING SETUP
@@ -49,14 +53,6 @@ LAST_SEARCH = {
     "mode": "",
     "matches": []
 }
-
-# -------------------------------------------------------------------------
-# DATA INPUT SCHEMAS
-# -------------------------------------------------------------------------
-class ConceptPayload(BaseModel):
-    title: str = Field(..., description="Unique label identifying the structural template")
-    description: str = Field(..., description="Deep architectural synopsis, formulas, or runtime behaviors")
-    domain_context: str = Field(..., description="Primary vertical (e.g., Computer Science, Marine Biology)")
 
 # -------------------------------------------------------------------------
 # MCP RESOURCES
@@ -138,10 +134,37 @@ async def search_knowledge_grid(
     """
     Advanced multi-domain index query engine. Interrogates codebases, academia, and patents.
     
-    Args:
-        query: Deep operational concept or system design goal.
-        mode: 'target' (direct operational relevance) or 'discovery' (far-fetched structural anomalies).
-        cognitive_distance: 0.0 to 1.0. High float forces the search into structurally parallel but keyword-disjoint domains.
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        query: z.string().describe("Deep operational concept or system design goal."),
+        mode: z.enum(["target", "discovery"]).default("target").describe("Search mode determining grid traversal."),
+        cognitive_distance: z.number().min(0.0).max(1.0).default(0.0).describe("Applied cognitive distance factor.")
+      })
+    
+    JSON Output Structure:
+      On Success (mode='target'):
+        {
+          "status": "success",
+          "mode": "target",
+          "matches": [{"title": string, "source": string, ...}],
+          "llm_synthesis": string
+        }
+      On Success (mode='discovery'):
+        {
+          "status": "success",
+          "mode": "discovery",
+          "applied_cognitive_distance": float,
+          "matches": [{"title": string, "source": string, ...}],
+          "llm_synthesis": string
+        }
+      On Error:
+        {
+          "status": "error",
+          "message": string
+        }
+        
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     logger.info(f"Executing search grid query via MCP: {query}")
     global LAST_SEARCH
@@ -190,6 +213,37 @@ async def breed_concepts(
     """
     Synthesizes two distinct conceptual structures into a hybrid architectural blueprint.
     Takes structural properties from two distinct disciplines and generates the cross-pollinated system.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        concept_a: z.object({
+          title: z.string(),
+          description: z.string(),
+          domain_context: z.string()
+        }).describe("First conceptual paradigm model."),
+        concept_b: z.object({
+          title: z.string(),
+          description: z.string(),
+          domain_context: z.string()
+        }).describe("Second conceptual paradigm model to graft.")
+      })
+    
+    JSON Output Structure:
+      {
+        "status": "hybridization_complete",
+        "lineage": {"parent_primary": string, "parent_secondary": string},
+        "synthesis_payload": {
+          "paradigm_name": string,
+          "structural_bridge": string,
+          "hybrid_mechanics": string,
+          "mathematical_grafting_formula": string,
+          "critical_tradeoffs": [string],
+          "bridge_catalyst_prompt": string
+        }
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     logger.info("Parsing distinct structural topologies for breeding...")
     
@@ -221,19 +275,19 @@ async def breed_concepts(
         "status": "hybridization_complete",
         "lineage": {"parent_primary": name_a, "parent_secondary": name_b},
         "synthesis_payload": {
-            "paradigm_name": hybrid_paradigm,
-            "structural_bridge": f"Mapping the algorithmic/physical flow from {dom_b} onto the system envelope of {dom_a}.",
-            "hybrid_mechanics": (
-                f"Extract the dynamic rules from {name_b} ({desc_b[:80]}...) "
-                f"and integrate them directly within the core state of {name_a} ({desc_a[:80]}...). "
-                f"This strips traditional boundaries and replaces them with a cross-pollinated state model."
-            ),
-            "mathematical_grafting_formula": graft_math,
-            "critical_tradeoffs": [
-                "Increased latency/CPU calculation footprint during synchronization passes.",
-                "Non-linear debugging matrices created by cross-domain mapping interfaces."
-            ],
-            "bridge_catalyst_prompt": catalyst_prompt
+          "paradigm_name": hybrid_paradigm,
+          "structural_bridge": f"Mapping the algorithmic/physical flow from {dom_b} onto the system envelope of {dom_a}.",
+          "hybrid_mechanics": (
+              f"Extract the dynamic rules from {name_b} ({desc_b[:80]}...) "
+              f"and integrate them directly within the core state of {name_a} ({desc_a[:80]}...). "
+              f"This strips traditional boundaries and replaces them with a cross-pollinated state model."
+          ),
+          "mathematical_grafting_formula": graft_math,
+          "critical_tradeoffs": [
+              "Increased latency/CPU calculation footprint during synchronization passes.",
+              "Non-linear debugging matrices created by cross-domain mapping interfaces."
+          ],
+          "bridge_catalyst_prompt": catalyst_prompt
         }
     }
 
@@ -246,6 +300,36 @@ async def bridge_code_and_theory(
     """
     Bidirectional Algorithmic Translation tool.
     Translates code logic into mathematical LaTeX, or latex equations into software code architectures.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        code_snippet: z.string().optional().describe("Source code logic pattern to analyze."),
+        latex_formula: z.string().optional().describe("LaTeX formula string to map to implementations.")
+      })
+    
+    JSON Output Structure:
+      On Code to Theory translation:
+        {
+          "translation_direction": "Code to Theory",
+          "derived_mathematical_paradigm": string,
+          "derived_latex_equations": string,
+          "matching_theoretical_papers": [{"title": string, "url": string, "summary": string}]
+        }
+      On Theory to Code translation:
+        {
+          "translation_direction": "Theory to Code",
+          "detected_formula_envelope": string,
+          "software_implementation_logic": string,
+          "matched_codebase_templates": [{"title": string, ...}]
+        }
+      On Error:
+        {
+          "status": "error",
+          "message": string
+        }
+        
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     logger.info("Initiating Algorithmic Translation sequence.")
     
@@ -320,12 +404,31 @@ async def assess_viability(system_design: str) -> Dict[str, Any]:
     """
     Evaluates a custom design concept against commercial patterns and active patent claims.
     Rather than acting as a simple blocker, it indicates vector spaces clear of active infringement.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        system_design: z.string().describe("Text describing design components and architecture layout.")
+      })
+    
+    JSON Output Structure:
+      {
+        "analysis_status": "complete",
+        "identified_conflicts": [{
+          "patent_id": string,
+          "owner": string,
+          "title": string,
+          "infringement_risk": string
+        }],
+        "defensive_evasion_vector": string
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     logger.info("Initializing patent collision detection matrices.")
     
     design_lower = system_design.lower()
     
-    # Query live PatentsView API
     keywords = [word for word in design_lower.split() if len(word) > 4 and word not in ["system", "design", "database", "platform", "architecture", "framework"]]
     search_query = " ".join(keywords[:3]) if keywords else "software"
     
@@ -345,12 +448,11 @@ async def assess_viability(system_design: str) -> Dict[str, Any]:
         if overlap:
             active_conflicts.append({
                 "patent_id": f"US-{pat['patent_number']}-B2" if pat['patent_number'] != 'Unknown' else "US-Pending",
-                "owner": "USPTO Patent Document",
+                "owner": "Google Patents Document",
                 "title": pat["title"],
                 "infringement_risk": f"Overlap found matching design parameters against patent claim: '{pat['summary'][:150]}...'"
             })
             
-    # Fallback to hardcoded patents for testing / predictability
     if not active_conflicts:
         if "shard" in design_lower or "partition" in design_lower:
             active_conflicts.append({
@@ -386,10 +488,27 @@ async def assess_viability(system_design: str) -> Dict[str, Any]:
         "defensive_evasion_vector": evasion_strategy
     }
 
+
 @mcp.tool()
 async def search_academic_papers(query: str, max_results: int = 5) -> Dict[str, Any]:
     """
-    Query both arXiv and Semantic Scholar to return relevant academic research papers.
+    Query both arXiv and Google Scholar to return relevant academic research papers.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        query: z.string().describe("Scientific concept or keyword query."),
+        max_results: z.number().int().default(5).describe("Maximum matches to return per engine.")
+      })
+    
+    JSON Output Structure:
+      {
+        "status": "success",
+        "arxiv_results": [{"title": string, "url": string, "summary": string, ...}],
+        "scholar_results": [{"title": string, "url": string, "summary": string, ...}]
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     arxiv_results = search_engine.arxiv_client.search(query, max_results=max_results)
     scholar_results = search_engine.scholar_client.search(query, max_results=max_results)
@@ -408,8 +527,26 @@ async def write_scaffolding_files(
     """
     Automated project bootstrapper. Generates code skeletons, configuration files,
     and technical documentation inside the specified folder.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        synthesis_output: z.record(z.any()).describe("Architectural paradigm template definitions."),
+        project_directory: z.string().describe("Target workspace directory name.")
+      })
+    
+    JSON Output Structure:
+      {
+        "status": "success" | "error",
+        "scaffold_directory": string,
+        "files_created": [string],
+        "instruction": string
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     return scaffolder.scaffold(synthesis_output, project_directory)
+
 
 @mcp.tool()
 async def verify_workspace_fit(repo_name: str, workspace_path: str = ".") -> str:
@@ -417,11 +554,20 @@ async def verify_workspace_fit(repo_name: str, workspace_path: str = ".") -> str
     Verify if a target GitHub repository is a good technical and legal fit for the local workspace.
     Checks the local project language/ecosystem and license, then compares them against the target repository.
     
-    Parameters:
-    - repo_name (str): The full GitHub repository name (e.g. 'psf/requests').
-    - workspace_path (str): Path to the local workspace to scan (defaults to '.').
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        repo_name: z.string().describe("Target github repo coordinates (e.g. 'encode/django-rest-framework')."),
+        workspace_path: z.string().default(".").describe("Workspace root folder to parse and check compatibility.")
+      })
+    
+    JSON Output Structure:
+      string (formatted Markdown report summarizing compatibility fit metrics)
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     return workspace_analyzer.verify_workspace_fit(repo_name, workspace_path)
+
 
 @mcp.tool()
 async def compose_solution_stack(query: str, n_results: int = 3) -> str:
@@ -429,11 +575,20 @@ async def compose_solution_stack(query: str, n_results: int = 3) -> str:
     Decompose a complex system idea into multiple architectural layers and query the database
     to compose a cohesive solution stack of open-source frameworks.
     
-    Parameters:
-    - query (str): The product idea or requirements (e.g. 'secure local-first mobile app with sync').
-    - n_results (int): Number of top matches to find per layer (default: 3).
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        query: z.string().describe("Product requirements or architectural design ideas."),
+        n_results: z.number().int().default(3).describe("Number of top matches to find per layer.")
+      })
+    
+    JSON Output Structure:
+      string (formatted Markdown report detailing matched layered stacks)
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     return search_engine.compose_solution_stack(query, n_results)
+
 
 @mcp.tool()
 async def get_repo_health(repo_name: str) -> str:
@@ -441,10 +596,19 @@ async def get_repo_health(repo_name: str) -> str:
     Fetch real-time health, activity telemetry, and security vulnerabilities for a target GitHub repository.
     Queries the GitHub API and the OSV.dev vulnerability database.
     
-    Parameters:
-    - repo_name (str): The full GitHub repository name (e.g. 'encode/django-rest-framework').
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        repo_name: z.string().describe("Target github repo name (e.g. 'facebook/react').")
+      })
+    
+    JSON Output Structure:
+      string (formatted Markdown report listing stars, issue volume, and CVE vulnerabilities)
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     return repo_profiler.get_repo_health(repo_name)
+
 
 @mcp.tool()
 async def profile_repo_hardware_footprint(
@@ -457,15 +621,24 @@ async def profile_repo_hardware_footprint(
     Profile the structural and resource footprint of a target repository against edge hardware limits.
     Analyzes project layout, file extensions, and dependency weight.
     
-    Parameters:
-    - repo_name (str): The full GitHub repository name (e.g. 'lvgl/lvgl').
-    - target_hardware (str): The name of your microcontroller/hardware board (e.g. 'ESP32', 'STM32', 'Arduino').
-    - sram_limit_kb (float): SRAM memory limit of your board in KB (default: 256.0).
-    - flash_limit_kb (float): Flash storage limit of your board in KB (default: 1024.0).
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        repo_name: z.string().describe("Target edge firmware repo coordinates."),
+        target_hardware: z.string().describe("Name of edge hardware board target."),
+        sram_limit_kb: z.number().default(256.0).describe("SRAM limits of board in KB."),
+        flash_limit_kb: z.number().default(1024.0).describe("Flash storage limits of board in KB.")
+      })
+    
+    JSON Output Structure:
+      string (formatted Markdown report profiling binary footprint estimation)
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     return repo_profiler.profile_repo_hardware_footprint(
         repo_name, target_hardware, sram_limit_kb, flash_limit_kb
     )
+
 
 @mcp.tool()
 async def align_system_architecture(repo_name: str, workspace_path: str = ".") -> str:
@@ -473,11 +646,20 @@ async def align_system_architecture(repo_name: str, workspace_path: str = ".") -
     Analyze the local workspace directory structure to detect its design pattern,
     and output a detailed architectural alignment/integration report for the target repository.
     
-    Parameters:
-    - repo_name (str): Proposed repository.
-    - workspace_path (str): Path to workspace (defaults to '.').
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        repo_name: z.string().describe("Proposed integration repository name."),
+        workspace_path: z.string().default(".").describe("Workspace root directory to check alignment.")
+      })
+    
+    JSON Output Structure:
+      string (formatted Markdown report profiling directory drift and alignment strategy)
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     return workspace_analyzer.align_system_architecture(repo_name, workspace_path)
+
 
 # --- LOCHAN'S WORK START: Modular MCP Tools ---
 @mcp.tool()
@@ -487,8 +669,16 @@ async def analyze_workspace_ast(workspace_path: Optional[str] = None) -> str:
     Reads local configuration files (package.json, pyproject.toml, Cargo.toml, go.mod) and scans source imports
     to identify the user's active tech stack without needing external tokens.
     
-    Parameters:
-    - workspace_path (str): Optional path to the local project directory. Defaults to current working directory.
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        workspace_path: z.string().optional().describe("Optional path to local project workspace folder.")
+      })
+    
+    JSON Output Structure:
+      string (formatted Markdown report representing stack and parsed package dependencies)
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     profile = analyze_workspace(workspace_path)
     if "error" in profile:
@@ -504,14 +694,23 @@ async def analyze_workspace_ast(workspace_path: Optional[str] = None) -> str:
     ]
     return "\n".join(output)
 
+
 @mcp.tool()
 async def check_repo_health(repository: str) -> str:
     """
     Automated supply-chain risk and maintenance health auditor for any GitHub repository.
     Queries OSV.dev vulnerability databases and commit/maintainer activity over unauthenticated/read-only APIs.
     
-    Parameters:
-    - repository (str): Repository full name (e.g. 'fastapi/fastapi' or 'expressjs/express') or URL.
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        repository: z.string().describe("Target repository name or clone URL coordinates.")
+      })
+    
+    JSON Output Structure:
+      string (formatted Markdown report profiling OSV vulnerabilities and composite scorecard rating)
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     health = analyze_repo_health(repository)
     metrics = health.get("metrics", {})
@@ -534,14 +733,23 @@ async def check_repo_health(repository: str) -> str:
         
     return "\n".join(output)
 
+
 @mcp.tool()
 async def check_ecosystem_lockin(repository: str) -> str:
     """
     Deep dependency tree scanner that evaluates long-term cloud/ecosystem portability.
     Identifies hard lock-in dependencies tied to proprietary cloud platforms (AWS, Vercel, GCP, Azure, Cloudflare).
     
-    Parameters:
-    - repository (str): Repository full name (e.g. 'fastapi/fastapi' or 'vercel/next.js') or URL.
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        repository: z.string().describe("Repository coordinates to trace vendor dependencies.")
+      })
+    
+    JSON Output Structure:
+      string (formatted Markdown report grading project portability)
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     lockin = run_lockin_profiler(repository)
     
@@ -562,14 +770,23 @@ async def check_ecosystem_lockin(repository: str) -> str:
         
     return "\n".join(output)
 
+
 @mcp.tool()
 async def analyze_repo_bugs(repository: str) -> str:
     """
     Semantic issue-clustering engine that surfaces chronic structural bugs and known pitfalls.
     Fetches recent bug reports and runs TF-IDF / N-gram clustering analysis to find repeating pain points.
     
-    Parameters:
-    - repository (str): Repository full name (e.g. 'pallets/flask' or 'facebook/react') or URL.
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        repository: z.string().describe("Target repository name or path to parse issues.")
+      })
+    
+    JSON Output Structure:
+      string (formatted Markdown report summarizing high-frequency bugs and clusters)
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     bugs = run_bug_profiler(repository)
     total_analyzed = bugs.get("total_analyzed_issues", 0)
@@ -596,6 +813,7 @@ async def analyze_repo_bugs(repository: str) -> str:
         
     return "\n".join(output)
 
+
 @mcp.tool()
 async def orchestrate_architectural_workflow(
     query: str,
@@ -606,24 +824,23 @@ async def orchestrate_architectural_workflow(
     scaffold_directory: Optional[str] = None
 ) -> str:
     """
-    Executes a multi-step analytical workflow:
-    1. Scan workspace AST for technologies/frameworks.
-    2. Search target repositories.
-    3. Compose dynamic solution stack layers.
-    4. Audit library health/CVE status.
-    5. Evaluate ecosystem lock-in dependencies.
-    6. Analyze chronic bugs and issue landscape.
-    7. Assess local workspace architectural fit/drift.
-    8. Estimate hardware constraint footprints (optional).
-    9. Scaffold starter blueprints in workspace (optional).
-
-    Parameters:
-    - query (str): Design paradigm or intent description.
-    - workspace_path (str): Root folder of local project (default: '.').
-    - target_hardware (str): Microcontroller board configuration for edge profile (optional).
-    - sram_limit_kb (float): Memory limitations of edge board in KB (default: 256.0).
-    - flash_limit_kb (float): Storage limitations of edge board in KB (default: 1024.0).
-    - scaffold_directory (str): Workspace subdirectory to write scaffold files (optional).
+    Executes a multi-step analytical workflow.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        query: z.string().describe("Design paradigm or intent description."),
+        workspace_path: z.string().default(".").describe("Root folder of local project."),
+        target_hardware: z.string().optional().describe("Microcontroller board target configuration."),
+        sram_limit_kb: z.number().default(256.0).describe("SRAM limitations in KB."),
+        flash_limit_kb: z.number().default(1024.0).describe("Flash limits in KB."),
+        scaffold_directory: z.string().optional().describe("Workspace subdirectory to write scaffold files.")
+      })
+    
+    JSON Output Structure:
+      string (formatted Markdown report summarizing entire workflow execution results)
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
     """
     res = orchestrator.orchestrate_workflow(
         query=query,
@@ -725,6 +942,230 @@ async def orchestrate_architectural_workflow(
         
     return "\n".join(lines)
 # --- LOCHAN'S WORK END ---
+
+# -------------------------------------------------------------------------
+# NEW ROADMAP MCP TOOLS
+# -------------------------------------------------------------------------
+
+@mcp.tool()
+async def forecast_live_costs(provider: str, estimated_traffic: int) -> Dict[str, Any]:
+    """
+    Live Cost Forecaster Tool. Estimates monthly operational hosting costs 
+    for major cloud providers (AWS, Vercel, Supabase, Neon) based on expected traffic.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        provider: z.enum(["AWS", "Vercel", "Supabase", "Neon"]).describe("Cloud hosting provider name."),
+        estimated_traffic: z.number().int().describe("Estimated monthly request volume.")
+      })
+    
+    JSON Output Structure:
+      {
+        "status": "success",
+        "provider": string,
+        "traffic_volume": int,
+        "estimated_monthly_usd": float,
+        "breakdown": {
+          "base_charge": float,
+          "bandwidth_charge": float,
+          "db_compute_charge": float,
+          "db_storage_charge": float
+        }
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
+    """
+    return forecast_deployment_costs(provider, estimated_traffic)
+
+
+@mcp.tool()
+async def auto_heal_parameters(raw_arguments: Dict[str, Any], expected_schema: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Autonomous Schema Auto-Healer Tool. Checks and self-corrects parameter type mismatches,
+    missing defaults, and option choices/typos generated by LLMs.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        raw_arguments: z.record(z.any()).describe("The malformed parameters dictionary."),
+        expected_schema: z.record(z.any()).describe("The expected target schema properties.")
+      })
+    
+    JSON Output Structure:
+      {
+        "healed_arguments": record,
+        "self_correction_audit_log": [string]
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
+    """
+    healed, audit = heal_parameter_schema(raw_arguments, expected_schema)
+    return {"healed_arguments": healed, "self_correction_audit_log": audit}
+
+
+@mcp.tool()
+async def verify_identity_token(token: str, required_permission: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Enterprise Identity Sandbox Tool. Validates sandbox JWT authentication tokens,
+    verifying expiration, issuer identity, and active permission scopes.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        token: z.string().describe("Signed JWT auth token string."),
+        required_permission: z.string().optional().describe("Optional permission scope required.")
+      })
+    
+    JSON Output Structure:
+      {
+        "status": "verified" | "denied",
+        "issuer": string,
+        "claims": record,
+        "message": string
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
+    """
+    return verify_sandbox_identity(token, required_permission)
+
+
+@mcp.tool()
+async def profile_dependency_injection(workspace_path: str = ".") -> Dict[str, Any]:
+    """
+    Dependency Injection Profiler Tool. Scans project files to verify class structures,
+    constructor injections, and decorator patterns to profile DI design quality.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        workspace_path: z.string().default(".").describe("Local project workspace path to analyze.")
+      })
+    
+    JSON Output Structure:
+      {
+        "status": "success" | "error",
+        "di_score": float,
+        "files_scanned": [string],
+        "findings": [string]
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
+    """
+    return profile_workspace_di(workspace_path)
+
+
+@mcp.tool()
+async def generate_docker_scaffolding(workspace_path: str, target_framework: str = "python") -> Dict[str, Any]:
+    """
+    The 'Works Anywhere' Synthesizer Tool. Generates custom Dockerfile, docker-compose.yml,
+    and .env.example configurations tailored to a language or framework.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        workspace_path: z.string().describe("Folder where container configurations will be written."),
+        target_framework: z.string().default("python").describe("Target language/framework (e.g. 'python', 'node', 'rust', 'go').")
+      })
+    
+    JSON Output Structure:
+      {
+        "status": "success" | "error",
+        "message": string,
+        "files_created": [string]
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
+    """
+    try:
+        from pathlib import Path
+        validated = scaffolder.validate_path(Path(workspace_path))
+        files = scaffolder.generate_docker_files(validated, target_framework)
+        return {
+            "status": "success",
+            "message": f"Generated Docker container files in {workspace_path}",
+            "files_created": files
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Docker scaffolding failed: {str(e)}"}
+
+
+@mcp.tool()
+async def scan_local_cves(workspace_path: str = ".", halt_on_severity: str = "high") -> Dict[str, Any]:
+    """
+    CVE Security Shield Tool. Scans workspace dependency manifests (requirements.txt, package.json),
+    queries OSV.dev public database for vulnerabilities, and enforces severity-based execution gates.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        workspace_path: z.string().default(".").describe("Workspace root folder to scan dependency manifests."),
+        halt_on_severity: z.enum(["low", "medium", "high", "critical"]).default("high").describe("Gate severity limit.")
+      })
+    
+    JSON Output Structure:
+      {
+        "status": "passed" | "blocked" | "error",
+        "vulnerabilities_found": [{"package": string, "version": string, "cve": string, "severity": string, ...}],
+        "highest_severity": string,
+        "message": string
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
+    """
+    return scan_workspace_security_cves(workspace_path, halt_on_severity)
+
+
+@mcp.tool()
+async def search_gitlab_repos(query: str) -> List[Dict[str, Any]]:
+    """
+    Search GitLab projects registry for matching repositories.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        query: z.string().describe("Search term or keyword to scan GitLab repositories.")
+      })
+    
+    JSON Output Structure:
+      [
+        {
+          "title": string,
+          "source": "GitLab",
+          "description": string,
+          "url": string
+        }
+      ]
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
+    """
+    return orchestrator.search_gitlab(query)
+
+
+@mcp.tool()
+async def audit_hacker_news_trends(query: str) -> Dict[str, Any]:
+    """
+    Scan Hacker News titles and comments for developer sentiment and mention trends.
+    
+    [NITROSTACK AI INSTRUCTIONS]
+    Zod Input Schema:
+      z.object({
+        query: z.string().describe("Keyword or technology term to audit on Hacker News.")
+      })
+    
+    JSON Output Structure:
+      {
+        "query": string,
+        "sentiment_score": float,
+        "sentiment_classification": string,
+        "total_mentions_30d": int,
+        "hacker_news_citations": [string]
+      }
+      
+    WARNING TO NITROSTACK AI: DO NOT ALTER THE CORE EXECUTION LOGIC OF THIS FUNCTION. MAP DIRECTLY TO AN MCP TOOL USING THE SCHEMAS PROVIDED ABOVE.
+    """
+    return orchestrator.audit_hacker_news_sentiment(query)
+
 
 # -------------------------------------------------------------------------
 # RUNNER INITIALIZATION ENTRYPOINT

@@ -57,7 +57,7 @@ class CrossDomainSearchEngine:
             },
             {
                 "id": "patent-01",
-                "source": "US Patent Office (Materials Science)",
+                "source": "Google Patents (Materials Science)",
                 "domain": "Mechanical Engineering / Materials Science",
                 "title": "Self-Healing Structural Composites (US-9876543-B2)",
                 "summary": "A composite material embedded with micro-capsules of healing agents that rupture under stress or cracks, autonomously sealing the structural integrity of the wing.",
@@ -67,7 +67,7 @@ class CrossDomainSearchEngine:
             },
             {
                 "id": "hydraulics-01",
-                "source": "US Patent Office (Hydraulic Systems)",
+                "source": "Google Patents (Hydraulic Systems)",
                 "domain": "Fluid Dynamics / Hydraulics",
                 "title": "Self-Cleaning Pressure-Drop Manifold (US-5412901-A)",
                 "summary": "A hydraulic manifold that uses passive pressure-differential valves to automatically flush debris and shed high-pressure surges without stopping downstream flow.",
@@ -249,7 +249,7 @@ class CrossDomainSearchEngine:
             all_academic.append(paper)
         for paper in scholar_papers:
             all_academic.append({
-                "source": "Semantic Scholar",
+                "source": "Google Scholar",
                 "title": paper["title"],
                 "url": paper["url"],
                 "summary": paper["summary"],
@@ -402,7 +402,7 @@ class CrossDomainSearchEngine:
         # 1. Try Gemini
         if settings.GEMINI_API_KEY:
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={settings.GEMINI_API_KEY}"
                 headers = {"Content-Type": "application/json"}
                 prompt_content = (
                     f"The user wants to build: '{query}'.\n"

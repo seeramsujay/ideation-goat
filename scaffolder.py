@@ -150,6 +150,20 @@ class StateBuffer:
                 f.write("pydantic>=2.0.0\n")
             written_files.append("requirements.txt")
             
+            # 5. Generate Docker scaffolding ("Works Anywhere" Synthesizer)
+            # Detect language/framework from imports or paradigm names
+            framework = "python"
+            p_name_lower = p_name.lower()
+            if any(k in p_name_lower for k in ["express", "node", "nest", "next", "react", "vue"]):
+                framework = "node"
+            elif any(k in p_name_lower for k in ["axum", "actix", "rust"]):
+                framework = "rust"
+            elif any(k in p_name_lower for k in ["gin", "fiber", "go"]):
+                framework = "go"
+                
+            docker_files = self.generate_docker_files(validated_dir, framework)
+            written_files.extend(docker_files)
+            
             return {
                 "status": "success",
                 "scaffold_directory": str(validated_dir),
@@ -157,9 +171,12 @@ class StateBuffer:
                     "README.md",
                     "math_engine.py",
                     "state_buffer.py",
-                    "requirements.txt"
+                    "requirements.txt",
+                    "Dockerfile",
+                    "docker-compose.yml",
+                    ".env.example"
                 ],
-                "instruction": "Open the directory in your workspace and trigger the implementation agent on the generated skeleton."
+                "instruction": "Open the directory in your workspace and run docker-compose up to start your environment."
             }
         except Exception as e:
             logger.error(f"Scaffolding operation failed midway: {str(e)}")
@@ -170,3 +187,119 @@ class StateBuffer:
                 except Exception:
                     pass
             return {"status": "error", "message": f"Scaffolding failed: {str(e)}"}
+
+    def generate_docker_files(self, validated_dir: Path, target_framework: str) -> list:
+        """
+        Generates Dockerfile, docker-compose.yml, and .env.example configuration files.
+        """
+        target_framework = target_framework.lower().strip()
+        dockerfile_content = ""
+        
+        # 1. Generate Dockerfile based on framework/language
+        if target_framework == "node":
+            dockerfile_content = """# Build Stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build --if-present
+
+# Production Stage
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+EXPOSE 3000
+CMD ["npm", "start"]
+"""
+        elif target_framework == "rust":
+            dockerfile_content = """# Build Stage
+FROM rust:1.75-slim AS builder
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+COPY src/ ./src/
+RUN cargo build --release
+
+# Production Stage
+FROM debian:bookworm-slim
+WORKDIR /app
+COPY --from=builder /app/target/release/app-binary ./app-binary
+EXPOSE 8080
+CMD ["./app-binary"]
+"""
+        elif target_framework == "go":
+            dockerfile_content = """# Build Stage
+FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o app-binary .
+
+# Production Stage
+FROM alpine:3.18
+WORKDIR /app
+COPY --from=builder /app/app-binary .
+EXPOSE 8080
+CMD ["./app-binary"]
+"""
+        else:  # Default to Python
+            dockerfile_content = """# Build Stage
+FROM python:3.11-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Production Stage
+FROM python:3.11-slim
+WORKDIR /app
+COPY --from=builder /root/.local /root/.local
+COPY . .
+ENV PATH=/root/.local/bin:$PATH
+ENV PYTHONUNBUFFERED=1
+EXPOSE 8000
+CMD ["python", "math_engine.py"]
+"""
+
+        # 2. Generate docker-compose.yml
+        compose_content = """version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - DATABASE_URL=${DATABASE_URL}
+      - API_KEY=${API_KEY}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    restart: always
+"""
+
+        # 3. Generate .env.example
+        env_content = """# App Configuration
+PORT=8080
+NODE_ENV=development
+
+# Database configuration
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/db_name
+
+# Security Auth settings
+API_KEY=your_sandbox_api_key_goes_here
+"""
+
+        # Write files
+        with open(validated_dir / "Dockerfile", "w", encoding="utf-8") as f:
+            f.write(dockerfile_content)
+        with open(validated_dir / "docker-compose.yml", "w", encoding="utf-8") as f:
+            f.write(compose_content)
+        with open(validated_dir / ".env.example", "w", encoding="utf-8") as f:
+            f.write(env_content)
+            
+        return ["Dockerfile", "docker-compose.yml", ".env.example"]
