@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "ideation-goat": {
+      "command": "uv",
+      "args": [
+        "run",
+        "server.py"
+      ],
+      "env": {
+        "WORKSPACE_ROOT": "."
+      }
+    }
+  }
+}
