@@ -11,110 +11,192 @@
   </p>
 </div>
 
----
-
-## What It Is
-
-Ideation GOAT is a production-grade Model Context Protocol (MCP) server that acts as the creative subconscious of advanced AI agents. It performs cross-domain knowledge hybridization, academic paper mapping, local compatibility scorecards, vendor cloud lock-in audits, and secure codebase scaffolding. 
-
-The server outputs structured JSON payloads and architectural specification reports that coding agents can immediately ingest and execute.
 
 ---
 
-## 🛠️ MCP Tools Exposed
+The Multi-Domain Semantic Architect Agent is an enterprise-grade Model Context Protocol server that operates as the analytical and creative subconscious of advanced AI coding agents. It exposes **24 autonomous diagnostic tools** spanning three distinct knowledge domains — codebases, academic research, and visual design — enabling AI agents to validate technical compatibility, audit supply-chain security, hybridize cross-domain concepts, and scaffold production-ready project architectures in a single unified pipeline.
 
-Ideation GOAT exposes **14 core developer diagnostics and cross-pollination tools** under `server.py`:
-
-| Tool / Name | Inputs | Description |
-| :--- | :--- | :--- |
-| **`search_knowledge_grid`** | `query`, `mode`, `cognitive_distance` | Searches local vector DB (ChromaDB), arXiv, and USPTO patents. Supports **Target Mode** (direct precision matches) and **Discovery Mode** (using an *Inverse-Similarity Filter* to discover scientific analogies outside of computer science). |
-| **`breed_concepts`** | `concept_a`, `concept_b` | Cross-pollinates two distinct architectural paradigms (e.g., biological processes and server caches) into a single hybrid specification. |
-| **`bridge_code_and_theory`** | `target_type`, `payload` | Bidirectionally translates between code implementations and mathematical LaTeX representations. |
-| **`check_repo_health`** | `owner`, `repo` | Fetches PR response times, commit velocity, and queries OSV.dev to scan the latest commit SHA for known vulnerabilities (CVEs). |
-| **`get_repo_health`** | `owner`, `repo` | Retrieves an aggregated repository vitality and momentum report over the past 3 years. |
-| **`analyze_workspace_ast`** | `workspace_path` | Offline AST scan of project manifest configurations (`package.json`, `requirements.txt`, etc.) and import statements to detect active languages and dependencies. |
-| **`verify_workspace_fit`** | `workspace_path`, `target_repo` | Audits licenses, package compatibility, and programming languages between the local workspace and a proposed GitHub repository. |
-| **`check_ecosystem_lockin`** | `owner`, `repo` | Scans a repository's imports to identify hard cloud vendor lock-in (AWS, GCP, Vercel) and computes a Portability Grade (A to F). |
-| **`analyze_repo_bugs`** | `owner`, `repo` | Gathers GitHub issue logs and clusters them using keyword analysis to report recurring chronic operational bugs before adoption. |
-| **`profile_repo_hardware_footprint`**| `owner`, `repo` | Estimates SRAM/Flash memory footprints and heap allocation weights for edge microcontroller deployments (ESP32, STM32, Arduino). |
-| **`align_system_architecture`** | `workspace_path` | Analyzes local folder structure layouts (e.g., Hexagonal, MVC, Clean) and provides matching structural integration advice. |
-| **`compose_solution_stack`** | `system_description` | Decomposes a multi-tier system requirement into layers and suggests compatible frameworks. |
-| **`search_academic_papers`** | `query` | Executes parallel queries across arXiv and Semantic Scholar to return relevant preprints, citation counts, and abstracts. |
-| **`write_scaffolding_files`** | `workspace_path`, `files` | Generates boilerplate files and skeleton structures securely inside the workspace. |
-| **`orchestrate_architectural_workflow`**| `query`, `workspace_path` | Coordinates all analytical scans (AST, compatibility, lock-in, bugs, hardware sizing, vulnerability checks, and project scaffolding) in a single-pass execution pipeline. |
+Powered by **Gemini 3.1 Flash Lite** for high-speed structural reasoning, enforced by **Zod-based auto-healing middleware** that self-corrects malformed LLM parameters at runtime, and deployed via the **NitroStack** framework for serverless MCP hosting on NitroCloud.
 
 ---
 
-## 🏛️ System Architecture
+## 🏗️ System Architecture
 
+```mermaid
+graph TD
+    %% ═══════════════════════════════════════════════════
+    %% COLOUR CLASSES
+    %% ═══════════════════════════════════════════════════
+    classDef client   fill:#1e293b,stroke:#94a3b8,color:#f1f5f9,stroke-width:2px
+    classDef gateway  fill:#312e81,stroke:#818cf8,color:#e0e7ff,stroke-width:2px
+    classDef mw       fill:#4c1d95,stroke:#a78bfa,color:#ede9fe,stroke-width:2px
+    classDef brain    fill:#7c3aed,stroke:#c4b5fd,color:#fff,stroke-width:3px
+    classDef d1node   fill:#0c4a6e,stroke:#38bdf8,color:#e0f2fe,stroke-width:1.5px
+    classDef d2node   fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1.5px
+    classDef d3node   fill:#431407,stroke:#fb923c,color:#ffedd5,stroke-width:1.5px
+    classDef db       fill:#78350f,stroke:#fbbf24,color:#fef3c7,stroke-width:2px
+
+    %% ═══════════════════════════════════════════════════
+    %% TIER 1 — HOST INGESTION LAYER
+    %% ═══════════════════════════════════════════════════
+    Client["🖥️  IDE Host · Claude Desktop · Custom AI Swarm"]:::client
+    Client -->|"stdio  ·  JSON-RPC 2.0"| Gateway["⚡ FastMCP Server  ·  JSON-RPC Stdio Gateway"]:::gateway
+
+    %% ═══════════════════════════════════════════════════
+    %% TIER 2 — ENTERPRISE MIDDLEWARE
+    %% ═══════════════════════════════════════════════════
+    Gateway --> Sandbox{"🔐  Identity Sandbox\nJWT Verification · Scope Guard"}:::mw
+    Sandbox -->|"valid token"| Healer["🛡️  Parameter Auto-Healer\nZod Coercion · Typo Fuzzy-Match · Default Injection"]:::mw
+    Healer --> Brain
+
+    %% ═══════════════════════════════════════════════════
+    %% TIER 3 — MASTER BRAIN
+    %% ═══════════════════════════════════════════════════
+    Brain(["🧠  Master Workflow Orchestrator\norchestrator.py"]):::brain
+
+    %% ═══════════════════════════════════════════════════
+    %% TIER 4a — DOMAIN 1: CODEBASE & FRAMEWORKS
+    %% ═══════════════════════════════════════════════════
+    Brain -->|"Codebase & Infra query"| D1
+
+    subgraph D1 ["📁  DOMAIN 1 — Codebase & Open Source Frameworks"]
+        direction TB
+        D1_AST["📂  Local AST Scanner\npackage.json · requirements.txt · Cargo.toml"]:::d1node
+        D1_GH["🐙  GitHub Registry Search\nRepo match · Star velocity · PR activity"]:::d1node
+        D1_GL["🦊  GitLab Projects Integration\nGitLab API · cross-registry sourcing"]:::d1node
+        D1_HN["📰  Hacker News Sentiment Auditor\nReal-time developer mention trends"]:::d1node
+        D1_CVE["🛡️  OSV.dev CVE Security Shield\nVulnerability scan · severity gates"]:::d1node
+        D1_LOCK["🔒  Ecosystem Lock-In Profiler\nAWS · GCP · Vercel · Portability Grade A–F"]:::d1node
+        D1_BUG["🩺  Chronic Bug Profiler\nTF-IDF issue clustering · recurring pitfalls"]:::d1node
+        D1_HW["🎛️  Edge Hardware Footprint Sizer\nSRAM · Flash · ESP32 · STM32 · Arduino"]:::d1node
+        D1_DI["💉  Dependency Injection Profiler\nDI pattern quality · coupling scorer"]:::d1node
+        D1_COST["💰  Cloud Cost Forecaster\nAWS · Vercel · Supabase · Neon estimates"]:::d1node
+        D1_DOCK["🐳  Docker & Scaffold Synthesizer\nDockerfile · docker-compose · .env.example"]:::d1node
+        D1_AST --> D1_GH --> D1_GL --> D1_HN --> D1_CVE
+        D1_CVE --> D1_LOCK --> D1_BUG --> D1_HW --> D1_DI --> D1_COST --> D1_DOCK
+    end
+
+    D1_AST -.->|"vector index"| ChromaDB[("🗄️  ChromaDB\nVector Store")]:::db
+    D1_GH  -.->|"embed repos"| ChromaDB
+
+    %% ═══════════════════════════════════════════════════
+    %% TIER 4b — DOMAIN 2: ACADEMIC & DEEP RESEARCH
+    %% ═══════════════════════════════════════════════════
+    Brain -->|"Research & theory query"| D2
+
+    subgraph D2 ["🔬  DOMAIN 2 — Academic & Deep Research Literature"]
+        direction TB
+        D2_ARX["📄  arXiv Preprint Engine\nAtom XML · retry backoff · category filter"]:::d2node
+        D2_SCH["🎓  Google Scholar Literature Client\nCitation counts · abstract summaries"]:::d2node
+        D2_PAT["⚖️  Google Patents IP Evasion Tool\nCollision detection · defensive strategy"]:::d2node
+        D2_BRG["🔄  Code ↔ Theory Bidirectional Translator\nCode → LaTeX · LaTeX → software template"]:::d2node
+        D2_ARX --> D2_SCH --> D2_PAT --> D2_BRG
+    end
+
+    %% ═══════════════════════════════════════════════════
+    %% TIER 4c — DOMAIN 3: VISUAL DESIGN & UI CANVAS
+    %% ═══════════════════════════════════════════════════
+    Brain -->|"Design & UI query"| D3
+
+    subgraph D3 ["🎨  DOMAIN 3 — Visual Design & Frontend Canvas"]
+        direction TB
+        D3_CAN["🌌  Metaphor Canvas Node Graph\nideation-goat://canvas  ·  cognitive-distance edges"]:::d3node
+        D3_HYB["🧬  Concept Hybridization Engine\nCross-domain analogy · LaTeX formula · catalyst prompt"]:::d3node
+        D3_AWW["🏆  Awwwards Design Scraper\nPremium UI pattern references"]:::d3node
+        D3_DRI["🎯  Dribbble Palette Harvester\nColour system · layout moodboards"]:::d3node
+        D3_WID["⚛️  @nitrostack/widgets Renderer Panel\nHealth Dashboard · Design Moodboard widgets"]:::d3node
+        D3_CAN --> D3_HYB --> D3_AWW --> D3_DRI --> D3_WID
+    end
+
+    D3_CAN -.->|"cache graph"| SessionCache[("💾  In-Memory\nSession Cache")]:::db
+    Brain  -.->|"pipeline state"| SessionCache
 ```
-         AI Agent (Claude Desktop, Cursor, or custom swarm)
-                                |
-                     JSON-RPC over stdio / stdout
-                                |
-                                v
-                       server.py (FastMCP)
-                                |
-           +--------------------+--------------------+
-           |                                         |
-     Tools Layer                               Resources Layer
- (14 Analytical Tools)                    (ideation-goat://canvas)
-           |                                         |
-           v                                         v
-   orchestrator.py                             search_engine.py
- (Unified Diagnostics)                      (ChromaDB / Vector Map)
-           |
-           +---> analyzers/ (AST, lock-in, bugs, health, compatibility)
-           +---> scaffolder.py (Protected file writing)
-           +---> _client.py (arXiv, Scholar, Patent APIs)
-```
 
 ---
 
-## ⚖️ Ethical Coding Principles & Privacy Safeguards
+## ⚡ Capability Matrix
 
-Ideation GOAT is built to respect developer environment integrity and enforce ethical coding practices:
+### 🛠️ 24 Autonomous Tools
 
-1.  **Local-First Privacy Guard:** Codebase analysis (such as AST scanning and import parsing) runs entirely locally and offline. Your source code is never transmitted to external APIs or training pipelines.
-2.  **Strict File System Boundaries:** The scaffolding tool implements strict directory traversal checks. Write operations are restricted strictly within the user-authorized workspace directory, protecting systemic operating files.
-3.  **No Unverified Third-Party Imports:** The engine does not download executable packages autonomously. It identifies and scores dependency trees so developers can make informed installation decisions.
-4.  **Copyleft License Guardrail:** The system proactively flags copyleft licenses (such as GPL/AGPL) if it detects integration with closed-source commercial workspaces, protecting projects from legal contagion.
-5.  **API Rate-Limit Etiquette:** Connections to public APIs (arXiv, Semantic Scholar, GitHub, OSV.dev) use caching, exponential backoff, and unauthenticated endpoints to avoid resource abuse and rate limits.
-6.  **Ecosystem Portability Advocacy:** The server actively identifies proprietary cloud vendor lock-in to help developers maintain technical sovereignty and build platform-agnostic software.
+| # | Tool | Domain | Purpose |
+|:--|:-----|:-------|:--------|
+| 1 | `search_knowledge_grid` | D1 & D2 | Multi-domain semantic search with Target and Discovery modes |
+| 2 | `breed_concepts` | D3 | Cross-pollinate two paradigms into a hybrid architectural blueprint |
+| 3 | `bridge_code_and_theory` | D2 | Bidirectional code ↔ LaTeX mathematical translation |
+| 4 | `assess_viability` | D2 | Patent collision detection and defensive evasion strategy |
+| 5 | `search_academic_papers` | D2 | Parallel arXiv + Google Scholar literature sweep |
+| 6 | `write_scaffolding_files` | D1 | Automated project skeleton and boilerplate generator |
+| 7 | `verify_workspace_fit` | D1 | License and ecosystem compatibility auditor |
+| 8 | `compose_solution_stack` | D1 | Multi-layer architectural decomposition and framework matching |
+| 9 | `get_repo_health` | D1 | Real-time GitHub health, stars, and CVE telemetry |
+| 10 | `profile_repo_hardware_footprint` | D1 | Edge device SRAM/Flash memory footprint estimation |
+| 11 | `align_system_architecture` | D1 | Directory structure pattern detection and alignment scoring |
+| 12 | `analyze_workspace_ast` | D1 | Zero-friction offline AST and dependency tree parser |
+| 13 | `check_repo_health` | D1 | Supply-chain risk and maintenance health auditor |
+| 14 | `check_ecosystem_lockin` | D1 | Vendor lock-in dependency scanner and portability grader |
+| 15 | `analyze_repo_bugs` | D1 | TF-IDF semantic clustering of chronic bug patterns |
+| 16 | `orchestrate_architectural_workflow` | D1 & D2 | Unified multi-step diagnostic pipeline orchestrator |
+| 17 | `forecast_live_costs` | D1 | Cloud hosting cost estimator (AWS, Vercel, Supabase, Neon) |
+| 18 | `auto_heal_parameters` | Core | Zod-based autonomous parameter type coercion and typo correction |
+| 19 | `verify_identity_token` | Core | JWT authentication sandbox with scope verification |
+| 20 | `profile_dependency_injection` | D1 | DI pattern quality scanner and modularity scorer |
+| 21 | `generate_docker_scaffolding` | D1 | Multi-stage Dockerfile and docker-compose generator |
+| 22 | `scan_local_cves` | D1 | OSV.dev vulnerability scanner with severity-based execution gates |
+| 23 | `search_gitlab_repos` | D1 | GitLab project registry search integration |
+| 24 | `audit_hacker_news_trends` | D1 | Real-time developer sentiment and mention trend auditor |
+
+### 🧠 Core Intelligence Features
+
+| Feature | Technology | Description |
+|:--------|:-----------|:------------|
+| 🤖 **LLM Synthesis Engine** | Gemini 3.1 Flash Lite | Powers concept hybridization, semantic analysis, and cross-domain analogy generation |
+| 🛡️ **Zod Auto-Healing** | `@nitrostack/core` | Intercepts malformed LLM parameters at runtime, coerces types, corrects typos, applies defaults |
+| 🔐 **Identity Sandbox** | PyJWT + OAuth 2.1 | Validates JWT tokens, enforces permission scopes, and gates privileged file operations |
+| 🌌 **Metaphor Canvas** | MCP Resource | Exposes interactive node-and-edge cognitive graphs for frontend visualization |
+| 📊 **Offline-First Testing** | Python unittest | 32/32 tests pass completely offline in under 2 seconds via mocked API interfaces |
 
 ---
 
 ## 📦 Installation & Setup
 
-To ensure isolation from your global Python environment, Ideation GOAT standardizes on the Python virtual environment (`venv`) and package manager (`pip`).
-
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/suzaykid/ideation-goat.git
 cd ideation-goat
 ```
 
-### 2. Create a Virtual Environment
-Create an isolated virtual environment named `.venv` in the project root:
+### 2. Install Python Core Dependencies
+
 ```bash
-python -m venv .venv
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-### 3. Activate the Environment
-Activate the environment depending on your operating system:
+### 3. Install TypeScript Wrapper Dependencies
 
-*   **macOS / Linux:**
-    ```bash
-    source .venv/bin/activate
-    ```
-*   **Windows (Command Prompt):**
-    ```cmd
-    .venv\Scripts\activate.bat
-    ```
-*   **Windows (PowerShell):**
-    ```powershell
-    .venv\Scripts\Activate.ps1
-    ```
+```bash
+pnpm install
+```
+
+### 4. Configure Environment Variables
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and populate the required keys:
+
+| Variable | Purpose |
+|:---------|:--------|
+| `GEMINI_API_KEY` | Gemini 3.1 Flash Lite API key for LLM synthesis |
+| `GITHUB_TOKEN` | GitHub Personal Access Token (optional, bypasses rate limits) |
+| `GITLAB_API_TOKEN` | GitLab API token for project registry searches |
+| `CHROMA_DB_PATH` | Local path to ChromaDB vector store collection |
+
+---
 
 ### 4. Install Dependencies
 ```bash
@@ -167,7 +249,6 @@ Replace `/ABSOLUTE/PATH/TO/ideation-goat` with the actual absolute path to your 
   }
 }
 ```
-
 ---
 
 ## 🧪 Running the Offline Test Suite
@@ -199,3 +280,4 @@ This project is licensed under the GPL-3.0 License.
 *   **NO AI Training Ingestion:** Ingestion of code, text, layouts, designs, or assets for training, validation, testing, or tuning of machine learning models or neural networks is strictly prohibited.
 *   **NO Automated Scraping:** Scraping, harvesting, or automated crawling of this repository by spiders or scraper bots is prohibited.
 *   **Personal/Human Use Only:** Access is provided strictly for human code inspection and educational review.
+

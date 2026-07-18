@@ -35,7 +35,7 @@ There is a massive gap between cutting-edge academic research and practical soft
 
 ### Core Addons & Tools Mapping
 *   **Academic Search (`search_academic_papers` & `search_knowledge_grid` - discovery mode):**
-    *   *Implementation:* Parallel queries across arXiv and Semantic Scholar. In `discovery` mode, it filters out direct computer science (`cs.*`) papers using an **Inverse-Similarity Filter** to discover parallel scientific concepts (e.g. biology, physics) that map back as structural analogies.
+    *   *Implementation:* Parallel queries across arXiv and Google Scholar. In `discovery` mode, it filters out direct computer science (`cs.*`) papers using an **Inverse-Similarity Filter** to discover parallel scientific concepts (e.g. biology, physics) that map back as structural analogies.
     *   *Codebase Reference:* `arxiv_client.py` and `scholar_client.py` (tested via `test_search_academic_papers` and `test_search_knowledge_grid_discovery`).
 *   **Concept Hybridization (`breed_concepts`):**
     *   *Implementation:* Cross-pollinates two distinct architectural paradigms into a single hybrid specification, producing a custom conceptual bridge, mathematical LaTeX formulas, and a catalyst prompt for client LLMs.

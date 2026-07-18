@@ -65,6 +65,8 @@ class TestIdeationGoatServer(unittest.TestCase):
         """
         Runs before each test case. Resets the global memory state.
         """
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
         server.LAST_SEARCH = {
             "query": "",
             "mode": "",
@@ -74,6 +76,13 @@ class TestIdeationGoatServer(unittest.TestCase):
         from unittest.mock import MagicMock
         server.search_engine.scholar_client.search = MagicMock(return_value=[])
         server.search_engine.patent_client.search = MagicMock(return_value=[])
+
+    def tearDown(self):
+        """
+        Cleans up the event loop after the test.
+        """
+        self.loop.close()
+        asyncio.set_event_loop(None)
 
     @patch("urllib.request.urlopen")
     def test_search_knowledge_grid_target_mode(self, mock_urlopen):
@@ -442,14 +451,21 @@ class TestIdeationGoatServer(unittest.TestCase):
         # Mock Response
         from unittest.mock import MagicMock
         import json
+        from config import settings
+        settings.GOOGLE_SCHOLAR_API_KEY = "fake_key"  # force API execution path
         mock_response = MagicMock()
         mock_response.read.return_value = json.dumps({
-            "data": [{
+            "organic_results": [{
                 "title": "Quantum Caching in Neurobiology",
-                "abstract": "A study of quantum cache effects.",
-                "url": "https://example.com/quantum",
-                "paperId": "12345",
-                "citationCount": 42
+                "publication_info": {
+                    "summary": "A study of quantum cache effects."
+                },
+                "link": "https://example.com/quantum",
+                "inline_links": {
+                    "cited_by": {
+                        "total": 42
+                    }
+                }
             }]
         }).encode('utf-8')
         mock_urlopen.return_value.__enter__.return_value = mock_response
@@ -461,18 +477,22 @@ class TestIdeationGoatServer(unittest.TestCase):
         self.assertEqual(len(papers), 1)
         self.assertEqual(papers[0]["title"], "Quantum Caching in Neurobiology")
         self.assertEqual(papers[0]["citations"], 42)
+        settings.GOOGLE_SCHOLAR_API_KEY = None  # restore
 
     @patch('urllib.request.urlopen')
     def test_patent_client_search(self, mock_urlopen):
         from unittest.mock import MagicMock
         import json
+        from config import settings
+        settings.GOOGLE_PATENTS_API_KEY = "fake_key"  # force API execution path
         mock_response = MagicMock()
         mock_response.read.return_value = json.dumps({
-            "patents": [{
-                "patent_number": "9999999",
-                "patent_title": "Cache Eviction Composite Systems",
-                "patent_abstract": "A method to evict items.",
-                "patent_date": "2026-01-01"
+            "organic_results": [{
+                "title": "Cache Eviction Composite Systems",
+                "snippet": "A method to evict items.",
+                "patent_id": "9999999",
+                "pdf": "https://example.com/pdf",
+                "publication_date": "2026-01-01"
             }]
         }).encode('utf-8')
         mock_urlopen.return_value.__enter__.return_value = mock_response
@@ -484,6 +504,7 @@ class TestIdeationGoatServer(unittest.TestCase):
         self.assertEqual(len(patents), 1)
         self.assertEqual(patents[0]["patent_number"], "9999999")
         self.assertEqual(patents[0]["title"], "Cache Eviction Composite Systems")
+        settings.GOOGLE_PATENTS_API_KEY = None  # restore
 
     @patch('urllib.request.urlopen')
     def test_search_academic_papers_tool(self, mock_urlopen):
@@ -492,18 +513,23 @@ class TestIdeationGoatServer(unittest.TestCase):
         import json
         mock_response = MagicMock()
         mock_response.read.return_value = json.dumps({
-            "data": [{
+            "organic_results": [{
                 "title": "Quantum Caching in Neurobiology",
-                "abstract": "A study of quantum cache effects.",
-                "url": "https://example.com/quantum",
-                "paperId": "12345",
-                "citationCount": 42
+                "publication_info": {
+                    "summary": "A study of quantum cache effects."
+                },
+                "link": "https://example.com/quantum",
+                "inline_links": {
+                    "cited_by": {
+                        "total": 42
+                    }
+                }
             }]
         }).encode('utf-8')
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
         server.search_engine.scholar_client.search = MagicMock(return_value=[{
-            "source": "Semantic Scholar",
+            "source": "Google Scholar",
             "title": "Quantum Caching in Neurobiology",
             "url": "https://example.com/quantum",
             "summary": "A study of quantum cache effects.",
@@ -656,6 +682,156 @@ class TestIdeationGoatServer(unittest.TestCase):
             self.assertIn("target_search", res["steps_executed"])
             self.assertIn("repo_health_check", res["steps_executed"])
             self.assertEqual(res["workspace_ast"]["primary_language"], "Python")
+
+    def test_forecast_live_costs(self):
+        """Test the live cost forecaster tool."""
+        from server import forecast_live_costs
+        loop = asyncio.get_event_loop()
+        
+        # Test Vercel
+        res = loop.run_until_complete(forecast_live_costs(provider="Vercel", estimated_traffic=50000))
+        self.assertEqual(res["provider"], "Vercel")
+        self.assertTrue(res["free_tier_covered"])
+        self.assertEqual(res["total_cost"], 0.0)
+        
+        # Test Vercel Paid
+        res_paid = loop.run_until_complete(forecast_live_costs(provider="Vercel", estimated_traffic=10_000_000))
+        self.assertEqual(res_paid["price_scaling_tier"], "Pro Tier")
+        self.assertGreater(res_paid["total_cost"], 0.0)
+
+    def test_auto_heal_parameters(self):
+        """Test the autonomous schema auto-healer tool."""
+        from server import auto_heal_parameters
+        loop = asyncio.get_event_loop()
+        
+        raw_args = {
+            "max_results": "5",          # Should be coerced to integer
+            "enable_cache": "true",       # Should be coerced to boolean
+            "mode": "targt"               # Should correct typo to "target"
+        }
+        schema = {
+            "max_results": {"type": int, "default": 10},
+            "enable_cache": {"type": bool, "default": False},
+            "mode": {"type": str, "choices": ["target", "discovery"], "default": "target"}
+        }
+        
+        res = loop.run_until_complete(auto_heal_parameters(raw_args, schema))
+        healed = res["healed_arguments"]
+        audit = res["self_correction_audit_log"]
+        
+        self.assertEqual(healed["max_results"], 5)
+        self.assertEqual(healed["enable_cache"], True)
+        self.assertEqual(healed["mode"], "target")
+        self.assertIn("max_results", audit)
+        self.assertIn("mode", audit)
+
+    def test_verify_identity_token(self):
+        """Test the enterprise identity sandbox tool."""
+        from server import verify_identity_token
+        from analyzers.identity_sandbox import generate_mock_jwt_token
+        loop = asyncio.get_event_loop()
+        
+        # Generate token
+        token = generate_mock_jwt_token(user_id="dev-agent-99", roles=["architect"], permissions=["write_files"])
+        
+        # Verify valid token
+        res = loop.run_until_complete(verify_identity_token(token, "write_files"))
+        self.assertEqual(res["status"], "authenticated")
+        self.assertTrue(res["authorized"])
+        self.assertEqual(res["user_id"], "dev-agent-99")
+        
+        # Verify missing permission
+        res_denied = loop.run_until_complete(verify_identity_token(token, "admin_all"))
+        self.assertEqual(res_denied["status"], "unauthorized")
+        self.assertFalse(res_denied["authorized"])
+
+    def test_profile_dependency_injection(self):
+        """Test the dependency injection profiler tool."""
+        from server import profile_dependency_injection
+        loop = asyncio.get_event_loop()
+        
+        res = loop.run_until_complete(profile_dependency_injection(workspace_path="."))
+        self.assertIn("workspace_path", res)
+        self.assertIn("di_score", res)
+        self.assertIn("di_grade", res)
+        self.assertIn("scanned_files", res)
+
+    def test_generate_docker_scaffolding(self):
+        """Test the works anywhere synthesizer tool."""
+        from server import generate_docker_scaffolding
+        import tempfile
+        loop = asyncio.get_event_loop()
+        
+        with tempfile.TemporaryDirectory(dir=".") as temp_dir:
+            res = loop.run_until_complete(generate_docker_scaffolding(workspace_path=temp_dir, target_framework="python"))
+            self.assertEqual(res["status"], "success")
+            self.assertIn("Dockerfile", res["files_created"])
+            self.assertIn("docker-compose.yml", res["files_created"])
+            
+            # Verify files exist
+            self.assertTrue(os.path.exists(os.path.join(temp_dir, "Dockerfile")))
+            self.assertTrue(os.path.exists(os.path.join(temp_dir, "docker-compose.yml")))
+            self.assertTrue(os.path.exists(os.path.join(temp_dir, ".env.example")))
+
+    def test_scan_local_cves(self):
+        """Test the CVE security shield tool."""
+        from server import scan_local_cves
+        loop = asyncio.get_event_loop()
+        
+        with patch("analyzers.cve_shield.fetch_osv_vulnerabilities") as mock_fetch:
+            # Setup mock to return a CVE for PyPI package
+            mock_fetch.return_value = [
+                {
+                    "id": "GHSA-xxxx-yyyy-zzzz",
+                    "summary": "Mock SQL Injection vulnerability",
+                    "severity": [{"type": "CVSS_V3", "score": "9.8"}]
+                }
+            ]
+            res = loop.run_until_complete(scan_local_cves(workspace_path=".", halt_on_severity="high"))
+            self.assertEqual(res["status"], "BLOCKED")
+            self.assertEqual(res["highest_severity_found"], "CRITICAL")
+            self.assertTrue(res["gate_triggered"])
+            self.assertGreater(res["packages_scanned"], 0)
+
+    def test_search_gitlab_repos(self):
+        """Test the GitLab repository search tool."""
+        from server import search_gitlab_repos
+        loop = asyncio.get_event_loop()
+        res = loop.run_until_complete(search_gitlab_repos(query="redis"))
+        self.assertGreater(len(res), 0)
+        self.assertEqual(res[0]["source"], "GitLab")
+        self.assertIn("redis", res[0]["title"])
+
+    def test_audit_hacker_news_trends(self):
+        """Test the Hacker News trends tracking tool."""
+        from server import audit_hacker_news_trends
+        loop = asyncio.get_event_loop()
+        res = loop.run_until_complete(audit_hacker_news_trends(query="caching"))
+        self.assertEqual(res["query"], "caching")
+        self.assertGreater(res["sentiment_score"], 0.0)
+        self.assertGreater(len(res["hacker_news_citations"]), 0)
+
+    def test_master_router_domain_routing(self):
+        """Test the Master Router domain classification and execution paths."""
+        from orchestrator import WorkflowOrchestrator
+        orchestrator = WorkflowOrchestrator()
+        
+        # Test routing decisions
+        self.assertEqual(orchestrator.route_to_domain("scientific paper search"), "Domain 2")
+        self.assertEqual(orchestrator.route_to_domain("streamlit UI design"), "Domain 3")
+        self.assertEqual(orchestrator.route_to_domain("redis cache implementation"), "Domain 1")
+
+        # Test Domain 2 mock execution
+        res_d2 = orchestrator.orchestrate_workflow(query="quantum theory paper")
+        self.assertEqual(res_d2["routed_domain"], "Domain 2")
+        self.assertEqual(res_d2["status"], "success")
+        self.assertIn("academic_search", res_d2["steps_executed"])
+
+        # Test Domain 3 mock execution
+        res_d3 = orchestrator.orchestrate_workflow(query="Tailwind UI dashboard")
+        self.assertEqual(res_d3["routed_domain"], "Domain 3")
+        self.assertEqual(res_d3["status"], "success")
+        self.assertIn("ui_design_route", res_d3["steps_executed"])
 
 if __name__ == "__main__":
     unittest.main()
