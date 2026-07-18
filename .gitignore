@@ -37,8 +37,9 @@ dist/
 build/
 *.egg-info/
 
-# UV lock file (per rule)
+# Lock files for local tooling (not used in public repo)
 uv.lock
+pnpm-lock.yaml
 
 # Archives (per rule)
 Archives/

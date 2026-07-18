@@ -178,7 +178,7 @@ pip install -r requirements.txt
 ### 3. Install TypeScript Wrapper Dependencies
 
 ```bash
-pnpm install
+npm install
 ```
 
 ### 4. Configure Environment Variables
