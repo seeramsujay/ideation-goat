@@ -14,8 +14,8 @@ The following table lists all 24 exposed Python tools in `server.py` to be autom
 | `search_knowledge_grid` | `server.py` | `{"query": "string", "strict_mode": "boolean", "cognitive_distance": "number"}` | Queries vector database indices, academic archives, and Google Patents records. |
 | `breed_concepts` | `server.py` | `{"parent_concept_a": "object", "parent_concept_b": "object"}` | Cross-pollinates two architectural concepts into a single hybrid layout spec. |
 | `bridge_code_and_theory` | `server.py` | `{"synthesis_output": "object", "translation_direction": "string"}` | Translates algorithmic code to LaTeX math representations, or vice versa. |
-| `assess_viability` | `server.py` | `{"proposed_blueprint": "object", "patent_collision_distance": "number"}` | Audits proposed design specs against Google Patents and public IP registers. |
-| `search_academic_papers` | `server.py` | `{"query": "string", "max_results": "number"}` | Fetches academic publication references and citation metrics from arXiv/Google Scholar. |
+| `assess_viability` | `server.py` | `{"proposed_blueprint": "object", "patent_collision_distance": "number"}` | Audits proposed design specs against Google Patents (via SerpApi) and public IP registers. |
+| `search_academic_papers` | `server.py` | `{"query": "string", "max_results": "number"}` | Fetches academic publication references and citation metrics from arXiv/Semantic Scholar. |
 | `write_scaffolding_files` | `server.py` | `{"synthesis_output": "object", "project_directory": "string"}` | Scaffolds directory skeletons, readme guidelines, and source stubs in the workspace. |
 | `verify_workspace_fit` | `server.py` | `{"repo_name": "string", "workspace_path": "string"}` | Verifies remote license and language compliance against local workspace configurations. |
 | `compose_solution_stack` | `server.py` | `{"query": "string", "n_results": "number"}` | Suggests open-source packages for each layer of a decomposed architecture description. |

@@ -448,7 +448,7 @@ async def assess_viability(system_design: str) -> Dict[str, Any]:
         if overlap:
             active_conflicts.append({
                 "patent_id": f"US-{pat['patent_number']}-B2" if pat['patent_number'] != 'Unknown' else "US-Pending",
-                "owner": "Google Patents Document",
+                "owner": pat.get("source", "Patent Document"),
                 "title": pat["title"],
                 "infringement_risk": f"Overlap found matching design parameters against patent claim: '{pat['summary'][:150]}...'"
             })
@@ -492,7 +492,7 @@ async def assess_viability(system_design: str) -> Dict[str, Any]:
 @mcp.tool()
 async def search_academic_papers(query: str, max_results: int = 5) -> Dict[str, Any]:
     """
-    Query both arXiv and Google Scholar to return relevant academic research papers.
+    Query both arXiv and Semantic Scholar to return relevant academic research papers.
     
     [NITROSTACK AI INSTRUCTIONS]
     Zod Input Schema:

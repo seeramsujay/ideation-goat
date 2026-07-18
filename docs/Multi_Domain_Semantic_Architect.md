@@ -35,8 +35,11 @@ There is a massive gap between cutting-edge academic research and practical soft
 
 ### Core Addons & Tools Mapping
 *   **Academic Search (`search_academic_papers` & `search_knowledge_grid` - discovery mode):**
-    *   *Implementation:* Parallel queries across arXiv and Google Scholar. In `discovery` mode, it filters out direct computer science (`cs.*`) papers using an **Inverse-Similarity Filter** to discover parallel scientific concepts (e.g. biology, physics) that map back as structural analogies.
+    *   *Implementation:* Parallel queries across arXiv and Semantic Scholar. In `discovery` mode, it filters out direct computer science (`cs.*`) papers using an **Inverse-Similarity Filter** to discover parallel scientific concepts (e.g. biology, physics) that map back as structural analogies.
     *   *Codebase Reference:* `arxiv_client.py` and `scholar_client.py` (tested via `test_search_academic_papers` and `test_search_knowledge_grid_discovery`).
+*   **Research Roadmap Orchestration (Domain 2 Workflow):**
+    *   *Implementation:* Executes a three-phase pipeline: (1) Finds academic papers via arXiv and Semantic Scholar; (2) Programmatically extracts required engineering/software frameworks from the literature; (3) Queries Google Patents (via SerpApi) for patents matching those frameworks for deep IP analysis, and then queries GitHub specifically for those framework codebases instead of searching for the broad original query term.
+    *   *Codebase Reference:* `orchestrator.py` (`_orchestrate_domain_2` / `_extract_frameworks`).
 *   **Concept Hybridization (`breed_concepts`):**
     *   *Implementation:* Cross-pollinates two distinct architectural paradigms into a single hybrid specification, producing a custom conceptual bridge, mathematical LaTeX formulas, and a catalyst prompt for client LLMs.
     *   *Codebase Reference:* `server.py` (tested via `test_breed_concepts`).

@@ -5,7 +5,7 @@ NITROSTACK MASTER ROUTER & ORCHESTRATION PIPELINE
 ROLE: Master Router (Orchestrator Core)
 TARGET CHANNELS:
   - Domain 1: Codebases & Frameworks (GitHub, GitLab, Hacker News developer trends)
-  - Domain 2: Research & Academia (arXiv, Google Scholar)
+  - Domain 2: Research & Academia (arXiv, Semantic Scholar)
   - Domain 3: Design & UI / Frontend (Tailwind, CSS, Streamlit templates)
 
 ROUTING LOGIC DEFINITION:
@@ -316,22 +316,111 @@ class WorkflowOrchestrator:
         report["status"] = "success"
         return report
 
+    def _extract_frameworks(self, papers: List[Dict[str, Any]], query: str) -> List[str]:
+        import re
+        frameworks = set()
+        word_pattern = re.compile(r'\b[A-Za-z0-9_-]+\b')
+        
+        # Stop words
+        stop_words = {
+            "the", "a", "an", "and", "or", "but", "if", "then", "else", "when", "at", "by", "for", "with", "about", 
+            "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", 
+            "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", 
+            "there", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", 
+            "not", "only", "own", "same", "so", "than", "too", "very", "can", "will", "just", "should", "now", 
+            "paper", "algorithm", "framework", "system", "method", "analysis", "approach", "optimization", 
+            "dynamic", "static", "performance", "evaluation", "design", "model", "network", "learning", "deep", 
+            "neural", "adaptive", "efficient", "novel", "using", "study", "process", "application", "distributed", 
+            "parallel", "concurrent", "quantum", "hybrid", "flexible", "scalable", "scholars", "patents", 
+            "available", "not", "search", "metadata", "open-access", "pdfs", "currently", "document", "documents"
+        }
+        
+        for paper in papers:
+            title = paper.get("title", "")
+            summary = paper.get("summary", "")
+            
+            # Skip placeholder/error titles
+            if "not available" in title.lower():
+                continue
+                
+            for text in [title, summary]:
+                for word in word_pattern.findall(text):
+                    is_candidate = False
+                    if word.istitle() and word.lower() not in stop_words:
+                        is_candidate = True
+                    elif word.isupper() and len(word) >= 2 and word.lower() not in stop_words:
+                        is_candidate = True
+                    elif any(c.isupper() for c in word[1:]) and not word.isupper():
+                        is_candidate = True
+                        
+                    if is_candidate:
+                        cleaned = word.strip(".,;:?!'\"()[]{}")
+                        if len(cleaned) >= 2 and cleaned.lower() not in stop_words:
+                            frameworks.add(cleaned)
+                            
+        # If no frameworks found, extract nouns or fallback to capitalized words in query
+        if not frameworks:
+            for word in word_pattern.findall(query):
+                if word.lower() not in stop_words and len(word) >= 2:
+                    frameworks.add(word.capitalize())
+                    
+        return sorted(list(frameworks))[:3]
+
     def _orchestrate_domain_2(self, report: Dict[str, Any], query: str) -> Dict[str, Any]:
         """
         Executes Domain 2 flow: Academic indexing & theoretical translation.
         """
         logger.info("Routing query to Academic Search and Paper translations.")
         try:
-            # Query arXiv and scholar clients directly
-            arxiv_res = self.search_engine.arxiv_client.search(query, max_results=5)
+            # 1. Search papers (arXiv & Semantic Scholar)
+            arxiv_res = self.search_engine.arxiv_client.search(query, max_results=3)
+            scholar_res = self.search_engine.scholar_client.search(query, max_results=3)
+            
             report["academic_sources"] = {
                 "arxiv": arxiv_res,
-                "scholar": []
+                "scholar": scholar_res
             }
             report["steps_executed"].append("academic_search")
+
+            # Combine papers to see what frameworks are required
+            all_papers = arxiv_res + scholar_res
+            
+            # Extract individual frameworks from papers
+            frameworks = self._extract_frameworks(all_papers, query)
+            report["extracted_frameworks"] = frameworks
+            report["steps_executed"].append("framework_extraction")
+            
+            # 2. Go to patents for deeper analysis (if available)
+            patent_results = {}
+            for fw in frameworks:
+                patents = self.search_engine.patent_client.search(fw, max_results=2)
+                # Keep only valid patents (if available)
+                valid_patents = [
+                    p for p in patents 
+                    if "not available" not in p.get("title", "").lower() and p.get("patent_number") != "N/A"
+                ]
+                if valid_patents:
+                    patent_results[fw] = valid_patents
+                    
+            if patent_results:
+                report["patent_analysis"] = patent_results
+                report["steps_executed"].append("patent_deeper_analysis")
+            else:
+                report["patent_analysis"] = "No patent information available for the identified frameworks."
+                
+            # 3. Search for individual frameworks in GitHub instead of the entire query
+            github_results = {}
+            for fw in frameworks:
+                github_matches = self.search_engine.query_vector_db(fw, n_results=2)
+                # If we get matches, store them
+                github_results[fw] = github_matches
+                
+            report["github_framework_search"] = github_results
+            report["steps_executed"].append("github_framework_search")
+            
             report["status"] = "success"
         except Exception as e:
-            logger.error(f"Academic search failed: {str(e)}")
+            logger.error(f"Academic search / research roadmap failed: {str(e)}")
             report["academic_error"] = str(e)
             report["status"] = "error"
         return report

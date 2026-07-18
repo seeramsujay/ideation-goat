@@ -451,56 +451,69 @@ class TestIdeationGoatServer(unittest.TestCase):
         # Mock Response
         from unittest.mock import MagicMock
         import json
-        from config import settings
-        settings.GOOGLE_SCHOLAR_API_KEY = "fake_key"  # force API execution path
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({
-            "organic_results": [{
+        sem_response = MagicMock()
+        sem_response.read.return_value = json.dumps({
+            "data": [{
+                "paperId": "quantum-cache-id",
                 "title": "Quantum Caching in Neurobiology",
-                "publication_info": {
-                    "summary": "A study of quantum cache effects."
+                "abstract": "A study of quantum cache effects.",
+                "citationCount": 42,
+                "externalIds": {
+                    "DOI": "10.1000/xyz123"
                 },
-                "link": "https://example.com/quantum",
-                "inline_links": {
-                    "cited_by": {
-                        "total": 42
-                    }
+                "openAccessPdf": {
+                    "url": "https://example.com/semantic_oa.pdf"
                 }
             }]
         }).encode('utf-8')
-        mock_urlopen.return_value.__enter__.return_value = mock_response
 
+        unpaywall_response = MagicMock()
+        unpaywall_response.read.return_value = json.dumps({
+            "is_oa": True,
+            "best_oa_location": {
+                "url_for_pdf": "https://example.com/quantum.pdf"
+            }
+        }).encode('utf-8')
+
+        mock_urlopen.side_effect = [
+            MagicMock(__enter__=MagicMock(return_value=sem_response)),
+            MagicMock(__enter__=MagicMock(return_value=unpaywall_response))
+        ]
+    
         from scholar_client import ScholarClient
         client = ScholarClient()
         papers = client.search("quantum cache")
-        
+    
         self.assertEqual(len(papers), 1)
         self.assertEqual(papers[0]["title"], "Quantum Caching in Neurobiology")
         self.assertEqual(papers[0]["citations"], 42)
-        settings.GOOGLE_SCHOLAR_API_KEY = None  # restore
+        self.assertEqual(papers[0]["url"], "https://example.com/quantum.pdf")
+        self.assertEqual(papers[0]["doi"], "10.1000/xyz123")
 
     @patch('urllib.request.urlopen')
     def test_patent_client_search(self, mock_urlopen):
         from unittest.mock import MagicMock
         import json
         from config import settings
-        settings.GOOGLE_PATENTS_API_KEY = "fake_key"  # force API execution path
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({
+        settings.GOOGLE_PATENTS_API_KEY = "fake_patents_key"  # force API execution path
+        serpapi_response = MagicMock()
+        serpapi_response.read.return_value = json.dumps({
             "organic_results": [{
+                "patent_id": "patent/US8110241B2/en",
+                "patent_link": "https://patents.google.com/patent/US8110241B2/en",
                 "title": "Cache Eviction Composite Systems",
                 "snippet": "A method to evict items.",
-                "patent_id": "9999999",
-                "pdf": "https://example.com/pdf",
-                "publication_date": "2026-01-01"
+                "publication_date": "2026-01-01",
+                "publication_number": "9999999"
             }]
         }).encode('utf-8')
-        mock_urlopen.return_value.__enter__.return_value = mock_response
 
+        mock_urlopen.return_value.__enter__.return_value = serpapi_response
+ 
         from patent_client import PatentClient
         client = PatentClient()
         patents = client.search("cache eviction")
-
+ 
         self.assertEqual(len(patents), 1)
         self.assertEqual(patents[0]["patent_number"], "9999999")
         self.assertEqual(patents[0]["title"], "Cache Eviction Composite Systems")
@@ -529,7 +542,7 @@ class TestIdeationGoatServer(unittest.TestCase):
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
         server.search_engine.scholar_client.search = MagicMock(return_value=[{
-            "source": "Google Scholar",
+            "source": "Semantic Scholar",
             "title": "Quantum Caching in Neurobiology",
             "url": "https://example.com/quantum",
             "summary": "A study of quantum cache effects.",
@@ -826,6 +839,10 @@ class TestIdeationGoatServer(unittest.TestCase):
         self.assertEqual(res_d2["routed_domain"], "Domain 2")
         self.assertEqual(res_d2["status"], "success")
         self.assertIn("academic_search", res_d2["steps_executed"])
+        self.assertIn("framework_extraction", res_d2["steps_executed"])
+        self.assertIn("github_framework_search", res_d2["steps_executed"])
+        self.assertIn("extracted_frameworks", res_d2)
+        self.assertIn("github_framework_search", res_d2)
 
         # Test Domain 3 mock execution
         res_d3 = orchestrator.orchestrate_workflow(query="Tailwind UI dashboard")

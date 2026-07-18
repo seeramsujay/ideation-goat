@@ -58,3 +58,6 @@ Thumbs.db
 # Temporary directories created by test suite
 tmp*/
 .tmp*/
+
+# Node modules
+node_modules/

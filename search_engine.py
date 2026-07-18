@@ -37,7 +37,7 @@ class CrossDomainSearchEngine:
         self.cross_domain_analogs = [
             {
                 "id": "bio-01",
-                "source": "Google Scholar (Neurobiology)",
+                "source": "Semantic Scholar (Neurobiology)",
                 "domain": "Biology / Neurobiology",
                 "title": "Cephalopod Synaptic Decay & Eviction Dynamics",
                 "summary": "Mathematical modeling of non-linear neurotransmitter decay pathways that optimize neural energy distribution by evicting low-frequency signals.",
@@ -77,10 +77,10 @@ class CrossDomainSearchEngine:
             },
             {
                 "id": "acoustics-01",
-                "source": "Google Scholar (Acoustic Engineering)",
+                "source": "Semantic Scholar (Acoustic Engineering)",
                 "domain": "Physics / Acoustics",
                 "title": "Adaptive Noise Cancellation Waveform Inversion",
-                "summary": "Real-time acoustic wave phase inversion algorithms that dynamically cancel ambient background noise by generating destructive interference fields.",
+                "summary": "Real-time academic wave phase inversion algorithms that dynamically cancel ambient background noise by generating destructive interference fields.",
                 "latent_mechanism": "Destructive interference phase inversion.",
                 "fit_analogy": "Applies to database privacy protection or adversarial defense. Generate 'destructive interference' fake data records in real-time that cancel out the signature of user search trends, protecting database queries against side-channel analysis.",
                 "keywords": ["noise", "cancel", "filter", "privacy", "secure", "perturb", "defense", "obfuscate"]
@@ -249,11 +249,15 @@ class CrossDomainSearchEngine:
             all_academic.append(paper)
         for paper in scholar_papers:
             all_academic.append({
-                "source": "Google Scholar",
+                "source": paper.get("source", "Semantic Scholar"),
                 "title": paper["title"],
                 "url": paper["url"],
                 "summary": paper["summary"],
-                "category": "non-cs"
+                "category": "non-cs",
+                "citations": paper.get("citations", 0),
+                "doi": paper.get("doi"),
+                "is_open_access": paper.get("is_open_access", False),
+                "pdf_url": paper.get("pdf_url")
             })
             
         # Apply Inverse-Similarity Filter: Ignore CS clusters to escape domain bubbles

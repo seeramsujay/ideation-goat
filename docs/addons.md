@@ -36,7 +36,7 @@ The following list contains all 24 fully implemented and active MCP tools expose
 
 ### 1. Multi-Domain Semantic Queries (`search_knowledge_grid`)
 * **Domain:** Domain 1 (Target Mode) / Domain 2 (Discovery Mode)
-* **Description:** Interrogates local vector databases (ChromaDB), academic paper search (arXiv), and Google Patents records.
+* **Description:** Interrogates local vector databases (ChromaDB), academic paper search (arXiv and Semantic Scholar), and Google Patents records (via SerpApi).
   * `target` Mode: High-precision, direct functional searches for relevant repositories and papers.
   * `discovery` Mode: Uses an **Inverse-Similarity Filter** to exclude direct computer science (`cs.*`) papers. Retrieves parallel concepts in disciplines like quantitative biology or physics, mapping them back as structural analogies.
 * **Python Module**: `search_engine.py`, `server.py`
@@ -53,12 +53,12 @@ The following list contains all 24 fully implemented and active MCP tools expose
 
 ### 4. Assess Patent Viability (`assess_viability`)
 * **Domain:** Domain 2 (Research & Academia)
-* **Description:** Evaluates custom software design concepts against active patent filings in Google Patents, outputting potential infringement risks and proposing defensive evasion strategies.
+* **Description:** Evaluates custom software design concepts against active patent filings in Google Patents (via SerpApi), outputting potential infringement risks and proposing defensive evasion strategies.
 * **Python Module**: `server.py`
 
 ### 5. Search Academic Papers (`search_academic_papers`)
 * **Domain:** Domain 2 (Research & Academia)
-* **Description:** Executes parallel queries across arXiv and Google Scholar databases to return academic literature summaries, authors, URLs, and citation statistics.
+* **Description:** Executes parallel queries across arXiv and Semantic Scholar (with Unpaywall DOI resolving) databases to return academic literature summaries, authors, URLs, citation statistics, and direct PDF download links.
 * **Python Module**: `search_engine.py`, `server.py`
 
 ### 6. Project Scaffolder (`write_scaffolding_files`)

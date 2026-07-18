@@ -121,7 +121,7 @@ export class IdeationGoatTools {
 
   @Tool({
     name: 'search_academic_papers',
-    description: 'Query both arXiv and Google Scholar to return relevant academic research papers.',
+    description: 'Query both arXiv and Semantic Scholar to return relevant academic research papers.',
     inputSchema: z.object({
       query: z.string().describe('Scientific concept or keyword query.'),
       max_results: z.number().int().default(5).describe('Maximum matches to return per engine.')
@@ -363,13 +363,17 @@ export class IdeationGoatTools {
 
 // Module configuration
 @Module({
-  providers: [IdeationGoatTools]
+  name: 'IdeationGoatModule',
+  controllers: [IdeationGoatTools]
 })
 export class IdeationGoatModule {}
 
 // App bootstrapping
 @McpApp({
-  name: 'IdeationGOAT',
-  modules: [IdeationGoatModule]
+  module: IdeationGoatModule,
+  server: {
+    name: 'IdeationGOAT',
+    version: '1.0.0'
+  }
 })
 export class IdeationGoatServer {}

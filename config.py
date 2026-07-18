@@ -22,6 +22,7 @@ class Settings:
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     GOOGLE_SCHOLAR_API_KEY: Optional[str] = os.getenv("GOOGLE_SCHOLAR_API_KEY")
     GOOGLE_PATENTS_API_KEY: Optional[str] = os.getenv("GOOGLE_PATENTS_API_KEY")
+    UNPAYWALL_EMAIL: Optional[str] = os.getenv("UNPAYWALL_EMAIL")
     
     # Security Boundary: Restricts all scaffolding writes and workspace scans to the workspace folder
     WORKSPACE_ROOT: Path = Path(os.getenv("WORKSPACE_ROOT", str(Path(__file__).parent.resolve()))).resolve()

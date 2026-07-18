@@ -21,7 +21,7 @@ This report confirms the completion and production readiness of every component 
 | **`server.py`** — 24 MCP tools with strict type hints and Zod schema docstrings | ✅ Complete & Locked |
 | **`orchestrator.py`** — Master workflow router with GitLab and Hacker News integrations | ✅ Complete & Locked |
 | **`analyzers/`** — 11 modular analysis engines (AST, CVE, DI, cost, bugs, health, lock-in, schema healing, identity) | ✅ Complete & Locked |
-| **`search_engine.py`** — ChromaDB vector search with arXiv, Google Scholar, and Google Patents clients | ✅ Complete & Locked |
+| **`search_engine.py`** — ChromaDB vector search with arXiv, Semantic Scholar, and Google Patents (via SerpApi) clients | ✅ Complete & Locked |
 | **`scaffolder.py`** — Secure file writer with path-traversal guards and Docker synthesis | ✅ Complete & Locked |
 | **Defensive Docstrings** — All 24 tools contain `[NITROSTACK AI INSTRUCTIONS]` with input/output Zod schemas and "DO NOT MODIFY" warnings | ✅ Injected |
 

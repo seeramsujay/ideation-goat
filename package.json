@@ -1,0 +1,20 @@
+{
+  "name": "ideation-goat",
+  "version": "1.0.0",
+  "description": "Cross-Domain Cross-Pollination & Ideation Engine for AI Agents",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "nitrostack-cli dev",
+    "build": "nitrostack-cli build",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@nitrostack/core": "^1.0.9"
+  },
+  "devDependencies": {
+    "@nitrostack/cli": "^1.0.14",
+    "@types/node": "^26.1.1",
+    "typescript": "^5.0.0"
+  }
+}

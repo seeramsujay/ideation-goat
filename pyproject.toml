@@ -1,7 +1,7 @@
 [project]
 name = "ideation-goat"
 version = "0.1.0"
-description = "Add your description here"
+description = "Multi-Domain Semantic Architect Agent supporting codebase matching, academic literature search (Semantic Scholar, arXiv), and patent search integration (Google Patents via SerpApi)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

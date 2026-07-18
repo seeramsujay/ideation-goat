@@ -22,6 +22,9 @@ Below is a breakdown of what every file in this repository does.
 Ideation_GOAT/
 ├── README.md                          <-- Core installation and usage guide
 ├── LICENSE                            <-- License details (GPL-3.0/MIT alignment)
+├── assets/                            <-- Rich design assets and branding images
+│   ├── banner.png                     <-- Project aesthetic header banner
+│   └── logo.png                       <-- Project graphic logo
 ├── app.py                             <-- Streamlit browser UI for local search/analysis
 ├── server.py                          <-- Primary MCP Server entrypoint (exposes resources/tools)
 ├── orchestrator.py                    <-- Multi-step diagnostic workflow orchestrator
@@ -29,13 +32,15 @@ Ideation_GOAT/
 ├── requirements.txt                   <-- Standard python environment dependencies list
 ├── pyproject.toml                     <-- Project metadata and dependencies configuration
 ├── mcp-config.json                    <-- Configuration settings for Claude Desktop
+├── nitro.config.json                  <-- NitroStack serverless compiler configuration
+├── package.json                       <-- Pnpm dependency package file for TypeScript
 ├── data_ingestion.py                  <-- Ingestion script to crawl GitHub repos into ChromaDB
 ├── search_engine.py                   <-- Target search and Discovery mode with similarity filter
 ├── scaffolder.py                      <-- Safe project bootstrapper with path traversal guards
 ├── repo_profiler.py                   <-- Edge MCU resource profiler & GitHub health telemetry
 ├── arxiv_client.py                    <-- arXiv Atom XML API client (with retry backoff)
-├── scholar_client.py                  <-- Google Scholar academic search client
-├── patent_client.py                   <-- Google Patents API query engine
+├── scholar_client.py                  <-- Semantic Scholar & Unpaywall academic search client
+├── patent_client.py                   <-- Google Patents API query engine (via SerpApi)
 ├── src/                               
 │   └── index.ts                       <-- TypeScript wrapper exposing `@Tool` endpoints
 ├── analyzers/
@@ -56,10 +61,11 @@ Ideation_GOAT/
 └── docs/                              
     ├── ARCHITECTURE.md                <-- [You are here] System architecture guide
     ├── addons.md                      <-- Complete 24 tools and resource documentation
-    ├── tobedone.md                    <-- Project backlog & capability roadmap
     ├── NITROSTACK_INSTRUCTIONS.md     <-- Handover specs for TypeScript compilation
     ├── UI_WIDGET_INSTRUCTIONS.md      <-- Blueprint instructions for React UI rendering
-    └── FINAL_HANDOVER_REPORT.md       <-- Hackathon final deliverable report
+    ├── FINAL_HANDOVER_REPORT.md       <-- Hackathon final deliverable report
+    ├── Multi_Domain_Semantic_Architect.md <-- Functional design and domain specifications
+    └── PITCH_SCRIPT.md                <-- Pitch script and presentation guidelines
 ```
 
 ---
@@ -100,7 +106,12 @@ Ideation_GOAT/
 
 ### 6. Workflow Orchestration
 *   **File:** `orchestrator.py`
-*   **Role:** Coordinates and sequences all analytical steps (AST check, repository matching, vitality/OSV health audit, ecosystem lock-in scanning, chronic bug profiling, compatibility check, edge microcontroller sizing, and code scaffolding) into a single unified analysis pipeline.
+*   **Role:**
+    *   **Domain 1 (Software):** Coordinates and sequences AST check, repo matching (GitHub + GitLab), health/OSV audit, lock-in scanning, chronic bug profiling, workspace fit/compatibility check, edge hardware sizing, and code scaffolding.
+    *   **Domain 2 (Research):** Orchestrates a three-step Research Roadmap:
+        1. Academic paper search across arXiv and Semantic Scholar.
+        2. Programmatic framework extraction from titles and abstracts.
+        3. Deeper IP/patent analysis (Google Patents via SerpApi) for each framework (if available) followed by targeted GitHub/VCS searches for individual framework repositories instead of searching for the broad concept.
 
 ---
 
