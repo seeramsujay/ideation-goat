@@ -1,4 +1,3 @@
 {
-  "entry": "src/index.ts",
-  "entryPoint": "src/index.ts"
+  "entry": "src/index.ts"
 }
