@@ -72,7 +72,7 @@ fsspec==2026.6.0
     # via huggingface-hub
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.52
+gitpython==3.2.1
     # via streamlit
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-grpc
