@@ -1,20 +1,17 @@
+import json
 import os
 import re
-import json
+from typing import Any, Dict, List, Set
+
 import requests
-from typing import Dict, Any, List, Set, Optional
+
 
 def fetch_osv_vulnerabilities(package_name: str, ecosystem: str) -> List[Dict[str, Any]]:
     """
     Queries OSV.dev API for vulnerabilities in a specific package and ecosystem.
     """
     url = "https://api.osv.dev/v1/query"
-    payload = {
-        "package": {
-            "name": package_name.lower(),
-            "ecosystem": ecosystem
-        }
-    }
+    payload = {"package": {"name": package_name.lower(), "ecosystem": ecosystem}}
     try:
         response = requests.post(url, json=payload, timeout=5)
         if response.status_code == 200:
@@ -22,6 +19,7 @@ def fetch_osv_vulnerabilities(package_name: str, ecosystem: str) -> List[Dict[st
     except Exception:
         pass
     return []
+
 
 def get_vuln_severity(vuln: Dict[str, Any]) -> str:
     """
@@ -45,16 +43,17 @@ def get_vuln_severity(vuln: Dict[str, Any]) -> str:
                     return "LOW"
             except ValueError:
                 pass
-                
+
     # 2. Check database specific fields
     db_specific = vuln.get("database_specific", {})
     if db_specific:
         sev = db_specific.get("severity", "").upper()
         if sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
             return sev
-            
+
     # 3. Default fallback
     return "MEDIUM"
+
 
 def scan_workspace_security_cves(workspace_path: str, halt_on_severity: str = "high") -> Dict[str, Any]:
     """
@@ -69,11 +68,11 @@ def scan_workspace_security_cves(workspace_path: str, halt_on_severity: str = "h
         "highest_severity_found": "NONE",
         "gate_triggered": False,
         "halt_on_severity_threshold": halt_on_severity.upper(),
-        "status": "PASS"
+        "status": "PASS",
     }
-    
+
     dependencies: List[Dict[str, str]] = []
-    
+
     # 1. Parse dependencies from requirements.txt
     req_txt = os.path.join(workspace, "requirements.txt")
     if os.path.exists(req_txt):
@@ -82,12 +81,12 @@ def scan_workspace_security_cves(workspace_path: str, halt_on_severity: str = "h
                 for line in f:
                     clean = line.strip().split("#")[0]
                     if clean:
-                        pkg = re.split(r'[=<>~!]', clean)[0].strip().lower()
+                        pkg = re.split(r"[=<>~!]", clean)[0].strip().lower()
                         if pkg:
                             dependencies.append({"name": pkg, "ecosystem": "PyPI"})
         except Exception:
             pass
-            
+
     # 2. Parse dependencies from package.json
     pkg_json = os.path.join(workspace, "package.json")
     if os.path.exists(pkg_json):
@@ -100,7 +99,7 @@ def scan_workspace_security_cves(workspace_path: str, halt_on_severity: str = "h
                             dependencies.append({"name": dep.lower(), "ecosystem": "npm"})
         except Exception:
             pass
-            
+
     # Deduplicate dependencies
     seen: Set[str] = set()
     unique_deps = []
@@ -109,14 +108,14 @@ def scan_workspace_security_cves(workspace_path: str, halt_on_severity: str = "h
         if key not in seen:
             seen.add(key)
             unique_deps.append(dep)
-            
+
     report["packages_scanned"] = len(unique_deps)
-    
+
     severity_rank = {"NONE": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
     threshold_rank = severity_rank.get(halt_on_severity.upper(), 3)  # Default halt on HIGH
-    
+
     highest_rank = 0
-    
+
     # 3. Query OSV.dev for each unique dependency
     for dep in unique_deps:
         vulns = fetch_osv_vulnerabilities(dep["name"], dep["ecosystem"])
@@ -125,26 +124,28 @@ def scan_workspace_security_cves(workspace_path: str, halt_on_severity: str = "h
             summary = v.get("summary", "No summary provided.")
             details = v.get("details", "")
             sev = get_vuln_severity(v)
-            
+
             # Record vulnerability
-            report["vulnerabilities_found"].append({
-                "package": dep["name"],
-                "ecosystem": dep["ecosystem"],
-                "id": v_id,
-                "severity": sev,
-                "summary": summary,
-                "details": details[:200] + "..." if len(details) > 200 else details
-            })
-            
+            report["vulnerabilities_found"].append(
+                {
+                    "package": dep["name"],
+                    "ecosystem": dep["ecosystem"],
+                    "id": v_id,
+                    "severity": sev,
+                    "summary": summary,
+                    "details": details[:200] + "..." if len(details) > 200 else details,
+                }
+            )
+
             # Check highest severity
             rank = severity_rank.get(sev, 2)
             if rank > highest_rank:
                 highest_rank = rank
                 report["highest_severity_found"] = sev
-                
+
             # Check gate execution halt
             if rank >= threshold_rank:
                 report["gate_triggered"] = True
                 report["status"] = "BLOCKED"
-                
+
     return report

@@ -1,30 +1,22 @@
 from datetime import datetime, timezone
+from typing import Any, Dict, List
+
 import requests
-from typing import Dict, Any, List, Optional
+
 from analyzers.github_public_api import make_github_request, parse_owner_repo
+
 
 def query_osv_vulnerabilities(package_name: str, language: str) -> List[Dict[str, Any]]:
     """
     Query OSV.dev public API for known vulnerabilities for a given package and language ecosystem.
     """
-    ecosystem_map = {
-        "python": "PyPI",
-        "javascript": "npm",
-        "typescript": "npm",
-        "rust": "crates.io",
-        "go": "Go"
-    }
+    ecosystem_map = {"python": "PyPI", "javascript": "npm", "typescript": "npm", "rust": "crates.io", "go": "Go"}
     ecosystem = ecosystem_map.get(language.lower())
     if not ecosystem:
         return []
 
     url = "https://api.osv.dev/v1/query"
-    payload = {
-        "package": {
-            "name": package_name.lower(),
-            "ecosystem": ecosystem
-        }
-    }
+    payload = {"package": {"name": package_name.lower(), "ecosystem": ecosystem}}
     try:
         response = requests.post(url, json=payload, timeout=5)
         if response.status_code == 200:
@@ -33,6 +25,7 @@ def query_osv_vulnerabilities(package_name: str, language: str) -> List[Dict[str
     except Exception as e:
         print(f"[DEBUG] OSV query failed for {package_name}: {e}")
     return []
+
 
 def analyze_repo_health(repo_name_or_url: str) -> Dict[str, Any]:
     """
@@ -45,7 +38,7 @@ def analyze_repo_health(repo_name_or_url: str) -> Dict[str, Any]:
             "health_score": 0,
             "status": "High Risk",
             "flags": ["INVALID_REPO: Could not parse repository identifier."],
-            "metrics": {}
+            "metrics": {},
         }
 
     # Fetch basic repo metadata
@@ -55,14 +48,14 @@ def analyze_repo_health(repo_name_or_url: str) -> Dict[str, Any]:
             "health_score": 50,
             "status": "Caution",
             "flags": ["UNVERIFIED: Could not fetch GitHub repository metadata."],
-            "metrics": {"repo": owner_repo}
+            "metrics": {"repo": owner_repo},
         }
 
     archived = repo_data.get("archived", False)
     language = repo_data.get("language") or "Unknown"
     stars = repo_data.get("stargazers_count", 0)
     pushed_at_str = repo_data.get("pushed_at")
-    
+
     # Check contributors count
     contributors = make_github_request(f"/repos/{owner_repo}/contributors", params={"per_page": 10})
     contributors_count = len(contributors) if isinstance(contributors, list) else 1
@@ -139,6 +132,6 @@ def analyze_repo_health(repo_name_or_url: str) -> Dict[str, Any]:
             "last_commit_date": last_commit_date,
             "contributors_count": contributors_count,
             "archived": archived,
-            "language": language
-        }
+            "language": language,
+        },
     }

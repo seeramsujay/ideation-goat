@@ -1,37 +1,126 @@
 import re
 from collections import Counter
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from analyzers.github_public_api import make_github_request, parse_owner_repo
 
 try:
-    from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.cluster import KMeans
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
     HAS_SKLEARN = True
 except ImportError:
     HAS_SKLEARN = False
 
 # Common stop words to filter out when extracting labels
 STOP_WORDS = {
-    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "with", "by", "from",
-    "up", "about", "into", "over", "after", "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did", "not", "no", "can", "could", "should", "would",
-    "will", "just", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more",
-    "most", "other", "some", "such", "than", "that", "this", "these", "those", "it", "its",
-    "of", "error", "bug", "issue", "fails", "failed", "when", "using", "use", "doesnt", "work",
-    "not", "working"
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "but",
+    "in",
+    "on",
+    "at",
+    "to",
+    "for",
+    "with",
+    "by",
+    "from",
+    "up",
+    "about",
+    "into",
+    "over",
+    "after",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "have",
+    "has",
+    "had",
+    "do",
+    "does",
+    "did",
+    "not",
+    "no",
+    "can",
+    "could",
+    "should",
+    "would",
+    "will",
+    "just",
+    "when",
+    "where",
+    "why",
+    "how",
+    "all",
+    "any",
+    "both",
+    "each",
+    "few",
+    "more",
+    "most",
+    "other",
+    "some",
+    "such",
+    "than",
+    "that",
+    "this",
+    "these",
+    "those",
+    "it",
+    "its",
+    "of",
+    "error",
+    "bug",
+    "issue",
+    "fails",
+    "failed",
+    "when",
+    "using",
+    "use",
+    "doesnt",
+    "work",
+    "not",
+    "working",
 }
 
 HIGH_SEVERITY_KEYWORDS = {
-    "crash", "crashes", "crashing", "leak", "memory", "deadlock", "drop", "dropped", "drops",
-    "disconnect", "security", "vulnerability", "fatal", "panic", "corrupt", "corruption",
-    "freeze", "freezes", "unresponsive", "oom", "segfault"
+    "crash",
+    "crashes",
+    "crashing",
+    "leak",
+    "memory",
+    "deadlock",
+    "drop",
+    "dropped",
+    "drops",
+    "disconnect",
+    "security",
+    "vulnerability",
+    "fatal",
+    "panic",
+    "corrupt",
+    "corruption",
+    "freeze",
+    "freezes",
+    "unresponsive",
+    "oom",
+    "segfault",
 }
+
 
 def _clean_title(title: str) -> List[str]:
     # Remove code blocks, brackets, tags like [Bug], (v2.0)
-    cleaned = re.sub(r'\[.*?\]|\(.*?\)', ' ', title.lower())
-    words = re.findall(r'[a-z0-9_-]+', cleaned)
+    cleaned = re.sub(r"\[.*?\]|\(.*?\)", " ", title.lower())
+    words = re.findall(r"[a-z0-9_-]+", cleaned)
     return [w for w in words if len(w) > 2 and w not in STOP_WORDS and not w.isdigit()]
+
 
 def _fallback_keyword_clustering(titles: List[str]) -> List[Dict[str, Any]]:
     """
@@ -75,18 +164,21 @@ def _fallback_keyword_clustering(titles: List[str]) -> List[Dict[str, Any]]:
 
             is_critical = any(h in kw or h in label.lower() for h in HIGH_SEVERITY_KEYWORDS) or pct >= 20.0
 
-            clusters.append({
-                "label": label,
-                "percentage": pct,
-                "count": len(matching_titles),
-                "example_issues": matching_titles[:2],
-                "is_critical": is_critical
-            })
+            clusters.append(
+                {
+                    "label": label,
+                    "percentage": pct,
+                    "count": len(matching_titles),
+                    "example_issues": matching_titles[:2],
+                    "is_critical": is_critical,
+                }
+            )
 
         if len(clusters) >= 3:
             break
 
     return sorted(clusters, key=lambda x: x["percentage"], reverse=True)
+
 
 def _sklearn_kmeans_clustering(titles: List[str], n_clusters: int = 3) -> List[Dict[str, Any]]:
     """
@@ -99,7 +191,7 @@ def _sklearn_kmeans_clustering(titles: List[str], n_clusters: int = 3) -> List[D
     try:
         vectorizer = TfidfVectorizer(max_features=100, stop_words=list(STOP_WORDS))
         X = vectorizer.fit_transform(titles)
-        
+
         # If vocabulary is too small, fallback
         if X.shape[1] < 3:
             return _fallback_keyword_clustering(titles)
@@ -122,21 +214,24 @@ def _sklearn_kmeans_clustering(titles: List[str], n_clusters: int = 3) -> List[D
             top_terms = [terms[ind] for ind in order_centroids[i, :2]]
             label_name = " + ".join(w.capitalize() for w in top_terms) + " problems"
             examples = [titles[idx] for idx in cluster_indices[:2]]
-            
+
             is_critical = any(h in label_name.lower() for h in HIGH_SEVERITY_KEYWORDS) or pct >= 20.0
 
-            clusters.append({
-                "label": label_name,
-                "percentage": pct,
-                "count": count,
-                "example_issues": examples,
-                "is_critical": is_critical
-            })
+            clusters.append(
+                {
+                    "label": label_name,
+                    "percentage": pct,
+                    "count": count,
+                    "example_issues": examples,
+                    "is_critical": is_critical,
+                }
+            )
 
         return sorted(clusters, key=lambda x: x["percentage"], reverse=True)
     except Exception as e:
         print(f"[DEBUG] Sklearn clustering error ({e}), falling back to keyword clustering.")
         return _fallback_keyword_clustering(titles)
+
 
 def analyze_repo_bugs(repo_name_or_url: str) -> Dict[str, Any]:
     """
@@ -148,12 +243,14 @@ def analyze_repo_bugs(repo_name_or_url: str) -> Dict[str, Any]:
             "total_analyzed_issues": 0,
             "top_pitfalls": [],
             "risk_level": "Unknown",
-            "error": "Could not parse repository identifier."
+            "error": "Could not parse repository identifier.",
         }
 
     # Fetch issues with label 'bug' first
-    issues = make_github_request(f"/repos/{owner_repo}/issues", params={"state": "all", "labels": "bug", "per_page": 80})
-    
+    issues = make_github_request(
+        f"/repos/{owner_repo}/issues", params={"state": "all", "labels": "bug", "per_page": 80}
+    )
+
     # If few bug-labeled issues, fetch general open/closed issues
     if not issues or len(issues) < 10:
         general_issues = make_github_request(f"/repos/{owner_repo}/issues", params={"state": "open", "per_page": 80})
@@ -165,7 +262,7 @@ def analyze_repo_bugs(repo_name_or_url: str) -> Dict[str, Any]:
             "total_analyzed_issues": 0,
             "top_pitfalls": [],
             "risk_level": "Low",
-            "message": "No recent issues found."
+            "message": "No recent issues found.",
         }
 
     # Filter out pull requests (GitHub API returns PRs inside issues endpoint)
@@ -177,7 +274,7 @@ def analyze_repo_bugs(repo_name_or_url: str) -> Dict[str, Any]:
             "total_analyzed_issues": 0,
             "top_pitfalls": [],
             "risk_level": "Low",
-            "message": "No valid issue titles analyzed."
+            "message": "No valid issue titles analyzed.",
         }
 
     if HAS_SKLEARN and len(titles) >= 5:
@@ -196,5 +293,5 @@ def analyze_repo_bugs(repo_name_or_url: str) -> Dict[str, Any]:
         "repo": owner_repo,
         "total_analyzed_issues": len(titles),
         "top_pitfalls": pitfalls,
-        "risk_level": risk_level
+        "risk_level": risk_level,
     }

@@ -11,3 +11,22 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "streamlit>=1.59.2",
 ]
+
+[tool.black]
+line-length = 120
+target-version = ['py312']
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | node_modules
+)/
+'''
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501", "W293"]

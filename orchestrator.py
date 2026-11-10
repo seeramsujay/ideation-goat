@@ -27,23 +27,22 @@ WARNING: DO NOT ALTER THE CORE EXECUTION LOGIC.
 ================================================================================
 """
 
-import os
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
-from config import settings
-from search_engine import CrossDomainSearchEngine
-from scaffolder import ProjectScaffolder
-from workspace_analyzer import WorkspaceAnalyzer
-from repo_profiler import RepoProfiler
+from analyzers.bug_profiler import analyze_repo_bugs as run_bug_profiler
+from analyzers.health_analyzer import analyze_repo_health
+from analyzers.lockin_profiler import check_ecosystem_lockin as run_lockin_profiler
 
 # Import modular analyzers
 from analyzers.workspace_analyzer import analyze_workspace
-from analyzers.health_analyzer import analyze_repo_health
-from analyzers.lockin_profiler import check_ecosystem_lockin as run_lockin_profiler
-from analyzers.bug_profiler import analyze_repo_bugs as run_bug_profiler
+from repo_profiler import RepoProfiler
+from scaffolder import ProjectScaffolder
+from search_engine import CrossDomainSearchEngine
+from workspace_analyzer import WorkspaceAnalyzer
 
 logger = logging.getLogger("IdeationGOAT.Orchestrator")
+
 
 class WorkflowOrchestrator:
     """
@@ -66,17 +65,17 @@ class WorkflowOrchestrator:
         Categorizes query intent into Domain 1, Domain 2, or Domain 3.
         """
         query_lower = query.lower()
-        
+
         # Domain 3 keywords (Design, UI/UX, layouts)
         domain_3_keywords = ["design", "ui", "ux", "css", "widget", "frontend", "color", "layout", "streamlit", "theme"]
         if any(kw in query_lower for kw in domain_3_keywords):
             return "Domain 3"
-            
+
         # Domain 2 keywords (Research, Papers)
         domain_2_keywords = ["paper", "arxiv", "scholar", "theory", "formula", "latex", "math", "equations", "academic"]
         if any(kw in query_lower for kw in domain_2_keywords):
             return "Domain 2"
-            
+
         # Default fallback is Domain 1 (Codebases/Frameworks)
         return "Domain 1"
 
@@ -92,14 +91,14 @@ class WorkflowOrchestrator:
                 "title": f"gitlab-org/{query.lower()}-runner" if query else "gitlab-org/gitlab-runner",
                 "source": "GitLab",
                 "description": f"GitLab project for {query} automation and runners.",
-                "url": "https://gitlab.com/gitlab-org/gitlab-runner"
+                "url": "https://gitlab.com/gitlab-org/gitlab-runner",
             },
             {
                 "title": f"gitlab-community/{query.lower()}-integration" if query else "gitlab-org/gitlab-foss",
                 "source": "GitLab",
                 "description": f"Community integration wrapper for {query} architectures.",
-                "url": "https://gitlab.com/gitlab-org/gitlab-foss"
-            }
+                "url": "https://gitlab.com/gitlab-org/gitlab-foss",
+            },
         ]
 
     def audit_hacker_news_sentiment(self, query: str) -> Dict[str, Any]:
@@ -116,8 +115,8 @@ class WorkflowOrchestrator:
             "hacker_news_citations": [
                 f"Show HN: {query.capitalize()} - A lock-free implementation",
                 f"Ask HN: Is anyone using {query.capitalize()} in production?",
-                f"Why we migrated our core engine to {query.capitalize()}"
-            ]
+                f"Why we migrated our core engine to {query.capitalize()}",
+            ],
         }
 
     def orchestrate_workflow(
@@ -127,7 +126,7 @@ class WorkflowOrchestrator:
         target_hardware: Optional[str] = None,
         sram_limit_kb: float = 256.0,
         flash_limit_kb: float = 1024.0,
-        scaffold_directory: Optional[str] = None
+        scaffold_directory: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Master orchestration gateway. Evaluates query intent, routes to target domain,
@@ -140,18 +139,23 @@ class WorkflowOrchestrator:
             "query": query,
             "routed_domain": domain,
             "status": "partial_success",
-            "steps_executed": []
+            "steps_executed": [],
         }
 
         # Route dynamically to specialized workflows
         if domain == "Domain 1":
             return self._orchestrate_domain_1(
-                workflow_report, query, workspace_path, target_hardware,
-                sram_limit_kb, flash_limit_kb, scaffold_directory
+                workflow_report,
+                query,
+                workspace_path,
+                target_hardware,
+                sram_limit_kb,
+                flash_limit_kb,
+                scaffold_directory,
             )
         elif domain == "Domain 2":
             return self._orchestrate_domain_2(workflow_report, query)
-        else: # Domain 3
+        else:  # Domain 3
             return self._orchestrate_domain_3(workflow_report, query, scaffold_directory)
 
     def _orchestrate_domain_1(
@@ -162,7 +166,7 @@ class WorkflowOrchestrator:
         target_hardware: Optional[str],
         sram_limit_kb: float,
         flash_limit_kb: float,
-        scaffold_directory: Optional[str]
+        scaffold_directory: Optional[str],
     ) -> Dict[str, Any]:
         """
         Executes Domain 1 flow: Codebases, Git repos (GitHub + GitLab), and HN Developer Sentiment.
@@ -183,12 +187,12 @@ class WorkflowOrchestrator:
         try:
             github_matches = self.search_engine.search_target(query)
             gitlab_matches = self.search_gitlab(query)
-            
+
             # Combine searches
             all_matches = github_matches + gitlab_matches
             report["matched_repositories"] = all_matches
             report["steps_executed"].append("target_search")
-            
+
             # Extract top repository for health/vulnerability checks
             for match in github_matches:
                 if match.get("source") == "GitHub" and "title" in match:
@@ -233,10 +237,7 @@ class WorkflowOrchestrator:
         try:
             health_analysis = analyze_repo_health(repo_for_api)
             repo_health_scorecard = self.repo_profiler.get_repo_health(repo_for_api)
-            report["repo_health"] = {
-                "scorecard": repo_health_scorecard,
-                "analysis": health_analysis
-            }
+            report["repo_health"] = {"scorecard": repo_health_scorecard, "analysis": health_analysis}
             report["steps_executed"].append("repo_health_check")
         except Exception as e:
             logger.error(f"Repository health telemetry check failed: {str(e)}")
@@ -263,14 +264,11 @@ class WorkflowOrchestrator:
             report["bug_profile_error"] = str(e)
 
         # Step 7: Workspace Compatibility & Architectural Alignment
-        logger.info(f"Executing Step 7: Workspace Compatibility Scorecard & Alignment.")
+        logger.info("Executing Step 7: Workspace Compatibility Scorecard & Alignment.")
         try:
             compatibility = self.workspace_analyzer.verify_workspace_fit(repo_for_api, workspace_path)
             alignment = self.workspace_analyzer.align_system_architecture(repo_for_api, workspace_path)
-            report["workspace_alignment"] = {
-                "compatibility_scorecard": compatibility,
-                "alignment_report": alignment
-            }
+            report["workspace_alignment"] = {"compatibility_scorecard": compatibility, "alignment_report": alignment}
             report["steps_executed"].append("workspace_fit_and_alignment")
         except Exception as e:
             logger.error(f"Workspace fit/alignment check failed: {str(e)}")
@@ -281,10 +279,7 @@ class WorkflowOrchestrator:
             logger.info(f"Executing Step 8: Edge Hardware Footprint Profiling on '{target_hardware}'.")
             try:
                 hardware_profile = self.repo_profiler.profile_repo_hardware_footprint(
-                    repo_for_api,
-                    target_hardware,
-                    sram_limit_kb,
-                    flash_limit_kb
+                    repo_for_api, target_hardware, sram_limit_kb, flash_limit_kb
                 )
                 report["edge_hardware_profile"] = hardware_profile
                 report["steps_executed"].append("hardware_footprint_profile")
@@ -301,11 +296,10 @@ class WorkflowOrchestrator:
                     "structural_bridge": f"Decoupled bridge matching the user's intent to build: '{query}'.",
                     "hybrid_mechanics": f"Grafts core features of {top_match_repo} into the local workspace project ecosystem.",
                     "mathematical_grafting_formula": r"f_{integration}(x) = x \times \lambda_{architecture}",
-                    "critical_tradeoffs": ["Initial wrapper overhead during database queries."]
+                    "critical_tradeoffs": ["Initial wrapper overhead during database queries."],
                 }
                 scaffold_results = self.scaffolder.scaffold(
-                    synthesis_output={"synthesis_payload": synthesis_payload},
-                    project_directory=scaffold_directory
+                    synthesis_output={"synthesis_payload": synthesis_payload}, project_directory=scaffold_directory
                 )
                 report["scaffold_generation"] = scaffold_results
                 report["steps_executed"].append("scaffold_generation")
@@ -318,31 +312,130 @@ class WorkflowOrchestrator:
 
     def _extract_frameworks(self, papers: List[Dict[str, Any]], query: str) -> List[str]:
         import re
+
         frameworks = set()
-        word_pattern = re.compile(r'\b[A-Za-z0-9_-]+\b')
-        
+        word_pattern = re.compile(r"\b[A-Za-z0-9_-]+\b")
+
         # Stop words
         stop_words = {
-            "the", "a", "an", "and", "or", "but", "if", "then", "else", "when", "at", "by", "for", "with", "about", 
-            "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", 
-            "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", 
-            "there", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", 
-            "not", "only", "own", "same", "so", "than", "too", "very", "can", "will", "just", "should", "now", 
-            "paper", "algorithm", "framework", "system", "method", "analysis", "approach", "optimization", 
-            "dynamic", "static", "performance", "evaluation", "design", "model", "network", "learning", "deep", 
-            "neural", "adaptive", "efficient", "novel", "using", "study", "process", "application", "distributed", 
-            "parallel", "concurrent", "quantum", "hybrid", "flexible", "scalable", "scholars", "patents", 
-            "available", "not", "search", "metadata", "open-access", "pdfs", "currently", "document", "documents"
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "if",
+            "then",
+            "else",
+            "when",
+            "at",
+            "by",
+            "for",
+            "with",
+            "about",
+            "against",
+            "between",
+            "into",
+            "through",
+            "during",
+            "before",
+            "after",
+            "above",
+            "below",
+            "to",
+            "from",
+            "up",
+            "down",
+            "in",
+            "out",
+            "on",
+            "off",
+            "over",
+            "under",
+            "again",
+            "further",
+            "then",
+            "once",
+            "here",
+            "there",
+            "all",
+            "any",
+            "both",
+            "each",
+            "few",
+            "more",
+            "most",
+            "other",
+            "some",
+            "such",
+            "no",
+            "nor",
+            "not",
+            "only",
+            "own",
+            "same",
+            "so",
+            "than",
+            "too",
+            "very",
+            "can",
+            "will",
+            "just",
+            "should",
+            "now",
+            "paper",
+            "algorithm",
+            "framework",
+            "system",
+            "method",
+            "analysis",
+            "approach",
+            "optimization",
+            "dynamic",
+            "static",
+            "performance",
+            "evaluation",
+            "design",
+            "model",
+            "network",
+            "learning",
+            "deep",
+            "neural",
+            "adaptive",
+            "efficient",
+            "novel",
+            "using",
+            "study",
+            "process",
+            "application",
+            "distributed",
+            "parallel",
+            "concurrent",
+            "quantum",
+            "hybrid",
+            "flexible",
+            "scalable",
+            "scholars",
+            "patents",
+            "available",
+            "not",
+            "search",
+            "metadata",
+            "open-access",
+            "pdfs",
+            "currently",
+            "document",
+            "documents",
         }
-        
+
         for paper in papers:
             title = paper.get("title", "")
             summary = paper.get("summary", "")
-            
+
             # Skip placeholder/error titles
             if "not available" in title.lower():
                 continue
-                
+
             for text in [title, summary]:
                 for word in word_pattern.findall(text):
                     is_candidate = False
@@ -352,18 +445,18 @@ class WorkflowOrchestrator:
                         is_candidate = True
                     elif any(c.isupper() for c in word[1:]) and not word.isupper():
                         is_candidate = True
-                        
+
                     if is_candidate:
                         cleaned = word.strip(".,;:?!'\"()[]{}")
                         if len(cleaned) >= 2 and cleaned.lower() not in stop_words:
                             frameworks.add(cleaned)
-                            
+
         # If no frameworks found, extract nouns or fallback to capitalized words in query
         if not frameworks:
             for word in word_pattern.findall(query):
                 if word.lower() not in stop_words and len(word) >= 2:
                     frameworks.add(word.capitalize())
-                    
+
         return sorted(list(frameworks))[:3]
 
     def _orchestrate_domain_2(self, report: Dict[str, Any], query: str) -> Dict[str, Any]:
@@ -375,49 +468,47 @@ class WorkflowOrchestrator:
             # 1. Search papers (arXiv & Semantic Scholar)
             arxiv_res = self.search_engine.arxiv_client.search(query, max_results=3)
             scholar_res = self.search_engine.scholar_client.search(query, max_results=3)
-            
-            report["academic_sources"] = {
-                "arxiv": arxiv_res,
-                "scholar": scholar_res
-            }
+
+            report["academic_sources"] = {"arxiv": arxiv_res, "scholar": scholar_res}
             report["steps_executed"].append("academic_search")
 
             # Combine papers to see what frameworks are required
             all_papers = arxiv_res + scholar_res
-            
+
             # Extract individual frameworks from papers
             frameworks = self._extract_frameworks(all_papers, query)
             report["extracted_frameworks"] = frameworks
             report["steps_executed"].append("framework_extraction")
-            
+
             # 2. Go to patents for deeper analysis (if available)
             patent_results = {}
             for fw in frameworks:
                 patents = self.search_engine.patent_client.search(fw, max_results=2)
                 # Keep only valid patents (if available)
                 valid_patents = [
-                    p for p in patents 
+                    p
+                    for p in patents
                     if "not available" not in p.get("title", "").lower() and p.get("patent_number") != "N/A"
                 ]
                 if valid_patents:
                     patent_results[fw] = valid_patents
-                    
+
             if patent_results:
                 report["patent_analysis"] = patent_results
                 report["steps_executed"].append("patent_deeper_analysis")
             else:
                 report["patent_analysis"] = "No patent information available for the identified frameworks."
-                
+
             # 3. Search for individual frameworks in GitHub instead of the entire query
             github_results = {}
             for fw in frameworks:
                 github_matches = self.search_engine.query_vector_db(fw, n_results=2)
                 # If we get matches, store them
                 github_results[fw] = github_matches
-                
+
             report["github_framework_search"] = github_results
             report["steps_executed"].append("github_framework_search")
-            
+
             report["status"] = "success"
         except Exception as e:
             logger.error(f"Academic search / research roadmap failed: {str(e)}")
@@ -425,7 +516,9 @@ class WorkflowOrchestrator:
             report["status"] = "error"
         return report
 
-    def _orchestrate_domain_3(self, report: Dict[str, Any], query: str, scaffold_directory: Optional[str]) -> Dict[str, Any]:
+    def _orchestrate_domain_3(
+        self, report: Dict[str, Any], query: str, scaffold_directory: Optional[str]
+    ) -> Dict[str, Any]:
         """
         Executes Domain 3 flow: UI designs, components, and Frontend mock architectures.
         """
@@ -434,16 +527,15 @@ class WorkflowOrchestrator:
             report["design_recommendation"] = {
                 "color_palette": "Deep Slate & Emerald Accent",
                 "framework_suggestion": "Streamlit & Vanilla CSS",
-                "layout_style": "Responsive Grid Sidebar"
+                "layout_style": "Responsive Grid Sidebar",
             }
             report["steps_executed"].append("ui_design_route")
-            
+
             if scaffold_directory:
                 # Scaffold a mock UI layout CSS file
                 ui_payload = {"css_rules": ".mcp-container { display: flex; font-family: sans-serif; }"}
                 scaffold_results = self.scaffolder.scaffold(
-                    synthesis_output={"synthesis_payload": ui_payload},
-                    project_directory=scaffold_directory
+                    synthesis_output={"synthesis_payload": ui_payload}, project_directory=scaffold_directory
                 )
                 report["scaffold_generation"] = scaffold_results
                 report["steps_executed"].append("scaffold_generation")
