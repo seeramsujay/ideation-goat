@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -6,19 +5,20 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Force UTF-8 encoding on standard output for Windows consoles to support emojis/Unicode
-if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 
 # Import the tools
 from server import (
-    verify_workspace_fit,
+    align_system_architecture,
     compose_solution_stack,
     get_repo_health,
     profile_repo_hardware_footprint,
-    align_system_architecture,
-    search_academic_papers
+    search_academic_papers,
+    verify_workspace_fit,
 )
+
 
 async def run_tests():
     """
@@ -75,7 +75,8 @@ async def run_tests():
     except Exception as e:
         print("FAILED:", e)
 
+
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(run_tests())
 
+    asyncio.run(run_tests())

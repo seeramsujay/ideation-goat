@@ -1,17 +1,31 @@
 import base64
 import json
 import re
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List
+
 from analyzers.github_public_api import make_github_request, parse_owner_repo
 
 VENDOR_PATTERNS = [
-    (r'^@aws-sdk/.*|^aws-sdk$|^boto3$|^botocore$|^aws-cdk.*|^aws-amplify$|^serverless$', "Amazon Web Services (AWS)", "Direct AWS SDK or serverless cloud adapter."),
-    (r'^@vercel/.*|^vercel$|^@edge-runtime/.*', "Vercel Cloud", "Vercel-specific cloud edge or hosting SDK."),
-    (r'^@google-cloud/.*|^google-cloud-.*|^firebase$|^firebase-admin$', "Google Cloud Platform / Firebase", "GCP or Firebase proprietary backend adapter."),
-    (r'^@azure/.*|^azure-.*', "Microsoft Azure", "Direct Azure cloud SDK or function adapter."),
-    (r'^wrangler$|^@cloudflare/.*', "Cloudflare Workers", "Cloudflare Edge/Worker specific runtime dependency."),
-    (r'^@supabase/.*|^supabase$', "Supabase Cloud", "Supabase proprietary BaaS client SDK (Self-hostable with effort)."),
+    (
+        r"^@aws-sdk/.*|^aws-sdk$|^boto3$|^botocore$|^aws-cdk.*|^aws-amplify$|^serverless$",
+        "Amazon Web Services (AWS)",
+        "Direct AWS SDK or serverless cloud adapter.",
+    ),
+    (r"^@vercel/.*|^vercel$|^@edge-runtime/.*", "Vercel Cloud", "Vercel-specific cloud edge or hosting SDK."),
+    (
+        r"^@google-cloud/.*|^google-cloud-.*|^firebase$|^firebase-admin$",
+        "Google Cloud Platform / Firebase",
+        "GCP or Firebase proprietary backend adapter.",
+    ),
+    (r"^@azure/.*|^azure-.*", "Microsoft Azure", "Direct Azure cloud SDK or function adapter."),
+    (r"^wrangler$|^@cloudflare/.*", "Cloudflare Workers", "Cloudflare Edge/Worker specific runtime dependency."),
+    (
+        r"^@supabase/.*|^supabase$",
+        "Supabase Cloud",
+        "Supabase proprietary BaaS client SDK (Self-hostable with effort).",
+    ),
 ]
+
 
 def _fetch_file_content(owner_repo: str, filepath: str) -> str:
     # Try fetching via API first
@@ -22,6 +36,7 @@ def _fetch_file_content(owner_repo: str, filepath: str) -> str:
         except Exception:
             pass
     return ""
+
 
 def _parse_dependencies(owner_repo: str) -> List[str]:
     deps = set()
@@ -43,7 +58,7 @@ def _parse_dependencies(owner_repo: str) -> List[str]:
         for line in req_txt_content.splitlines():
             clean = line.strip().split("#")[0]
             if clean:
-                pkg = re.split(r'[=<>~!]', clean)[0].strip()
+                pkg = re.split(r"[=<>~!]", clean)[0].strip()
                 if pkg:
                     deps.add(pkg)
 
@@ -58,6 +73,7 @@ def _parse_dependencies(owner_repo: str) -> List[str]:
 
     return list(deps)
 
+
 def check_ecosystem_lockin(repo_name_or_url: str) -> Dict[str, Any]:
     """
     Analyze a repository's dependency tree and files to detect proprietary ecosystem lock-in.
@@ -69,7 +85,7 @@ def check_ecosystem_lockin(repo_name_or_url: str) -> Dict[str, Any]:
             "portability_grade": "Unknown",
             "grade_color": "#A0AEC0",
             "locked_dependencies": [],
-            "summary": "Could not parse repository identifier."
+            "summary": "Could not parse repository identifier.",
         }
 
     dependencies = _parse_dependencies(owner_repo)
@@ -78,11 +94,7 @@ def check_ecosystem_lockin(repo_name_or_url: str) -> Dict[str, Any]:
     for dep in dependencies:
         for pattern, vendor, reason in VENDOR_PATTERNS:
             if re.match(pattern, dep, re.IGNORECASE):
-                locked_deps.append({
-                    "package": dep,
-                    "vendor": vendor,
-                    "reason": reason
-                })
+                locked_deps.append({"package": dep, "vendor": vendor, "reason": reason})
                 break
 
     # Determine Grade
@@ -112,5 +124,5 @@ def check_ecosystem_lockin(repo_name_or_url: str) -> Dict[str, Any]:
         "grade_color": color,
         "total_dependencies_checked": len(dependencies),
         "locked_dependencies": locked_deps,
-        "summary": summary
+        "summary": summary,
     }

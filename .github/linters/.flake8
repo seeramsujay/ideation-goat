@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 120
+extend-ignore = E203, W503, E501, W293
+exclude = .git,__pycache__,build,dist,.venv,venv,node_modules
+
+per-file-ignores =
+    tests/*:E402

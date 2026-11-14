@@ -1,8 +1,8 @@
 import os
 import time
+from typing import Any, Dict, Optional
+
 import requests
-from functools import lru_cache
-from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,15 +11,14 @@ load_dotenv()
 _CACHE: Dict[str, Dict[str, Any]] = {}
 CACHE_TTL_SECONDS = 3600  # 1 hour cache duration
 
+
 def get_github_headers() -> Dict[str, str]:
-    headers = {
-        "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "NitroForge-Semantic-Matcher"
-    }
+    headers = {"Accept": "application/vnd.github.v3+json", "User-Agent": "NitroForge-Semantic-Matcher"}
     token = os.getenv("GITHUB_TOKEN")
     if token:
         headers["Authorization"] = f"token {token}"
     return headers
+
 
 def make_github_request(endpoint: str, params: Optional[Dict[str, Any]] = None) -> Optional[Any]:
     """
@@ -44,7 +43,7 @@ def make_github_request(endpoint: str, params: Optional[Dict[str, Any]] = None) 
     headers = get_github_headers()
     try:
         response = requests.get(url, headers=headers, params=params, timeout=10)
-        
+
         # Check rate limit specifically
         if response.status_code == 403 and "X-RateLimit-Remaining" in response.headers:
             remaining = int(response.headers.get("X-RateLimit-Remaining", 0))
@@ -72,6 +71,7 @@ def make_github_request(endpoint: str, params: Optional[Dict[str, Any]] = None) 
         if cache_key in _CACHE:
             return _CACHE[cache_key]["data"]
         return None
+
 
 def parse_owner_repo(repo_full_name_or_url: str) -> Optional[str]:
     """

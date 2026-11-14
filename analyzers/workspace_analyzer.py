@@ -1,7 +1,7 @@
-import os
 import json
+import os
 import re
-from typing import Dict, Any, List, Set
+from typing import Any, Dict, Set
 
 FRAMEWORK_SIGNATURES = {
     # Python
@@ -33,6 +33,7 @@ FRAMEWORK_SIGNATURES = {
     "github.com/labstack/echo": "Echo",
 }
 
+
 def analyze_workspace(workspace_path: str = None) -> Dict[str, Any]:
     """
     Read-only AST and dependency analysis of a local workspace folder.
@@ -49,7 +50,7 @@ def analyze_workspace(workspace_path: str = None) -> Dict[str, Any]:
             "frameworks_detected": [],
             "dependencies": [],
             "build_tools": [],
-            "error": f"Path '{workspace_path}' does not exist or is not a directory."
+            "error": f"Path '{workspace_path}' does not exist or is not a directory.",
         }
 
     languages: Set[str] = set()
@@ -85,7 +86,7 @@ def analyze_workspace(workspace_path: str = None) -> Dict[str, Any]:
                 for line in f:
                     clean = line.strip().split("#")[0]
                     if clean:
-                        pkg = re.split(r'[=<>~!]', clean)[0].strip().lower()
+                        pkg = re.split(r"[=<>~!]", clean)[0].strip().lower()
                         if pkg:
                             dependencies.add(pkg)
                             if pkg in FRAMEWORK_SIGNATURES:
@@ -115,7 +116,7 @@ def analyze_workspace(workspace_path: str = None) -> Dict[str, Any]:
             with open(cargo_path, "r", encoding="utf-8") as f:
                 content = f.read()
                 for key, name in FRAMEWORK_SIGNATURES.items():
-                    if re.search(re.escape(key) + r'\s*=', content):
+                    if re.search(re.escape(key) + r"\s*=", content):
                         frameworks.add(name)
                         dependencies.add(key)
         except Exception:
@@ -139,7 +140,11 @@ def analyze_workspace(workspace_path: str = None) -> Dict[str, Any]:
     files_checked = 0
     for root, dirs, files in os.walk(workspace_path):
         # Exclude node_modules, venv, .git, chroma_data
-        dirs[:] = [d for d in dirs if d not in ["node_modules", "venv", ".venv", ".git", "__pycache__", "chroma_data", "dist", "build"]]
+        dirs[:] = [
+            d
+            for d in dirs
+            if d not in ["node_modules", "venv", ".venv", ".git", "__pycache__", "chroma_data", "dist", "build"]
+        ]
         if files_checked >= 30:
             dirs[:] = []
             break
@@ -163,12 +168,16 @@ def analyze_workspace(workspace_path: str = None) -> Dict[str, Any]:
                 try:
                     filepath = os.path.join(root, file)
                     with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                        code = f.read(4096) # read first 4KB
+                        code = f.read(4096)  # read first 4KB
                         for key, name in FRAMEWORK_SIGNATURES.items():
                             if name not in frameworks:
-                                if ext == ".py" and re.search(r'^\s*(?:import|from)\s+' + re.escape(key), code, re.MULTILINE):
+                                if ext == ".py" and re.search(
+                                    r"^\s*(?:import|from)\s+" + re.escape(key), code, re.MULTILINE
+                                ):
                                     frameworks.add(name)
-                                elif ext in [".ts", ".js", ".tsx", ".jsx"] and re.search(r'(?:import|require)\s*\(?["\'].*?' + re.escape(key) + r'.*?["\']\)?', code):
+                                elif ext in [".ts", ".js", ".tsx", ".jsx"] and re.search(
+                                    r'(?:import|require)\s*\(?["\'].*?' + re.escape(key) + r'.*?["\']\)?', code
+                                ):
                                     frameworks.add(name)
                 except Exception:
                     pass
@@ -194,5 +203,5 @@ def analyze_workspace(workspace_path: str = None) -> Dict[str, Any]:
         "languages_detected": sorted(list(languages)),
         "frameworks_detected": sorted(list(frameworks)),
         "dependencies": sorted(list(dependencies)),
-        "build_tools": sorted(list(build_tools))
+        "build_tools": sorted(list(build_tools)),
     }
