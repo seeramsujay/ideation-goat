@@ -129,14 +129,14 @@ class StateBuffer:
     def __init__(self):
         self.registry: Dict[str, Any] = {{}}
         self.write_rates: Dict[str, float] = {{}}
-        
+
     def register_state(self, key: str, payload: Any):
         """
         Saves key payload and increments local traffic density coordinates.
         """
         self.registry[key] = payload
         self.write_rates[key] = self.write_rates.get(key, 0.0) + 1.0
-        
+
     def check_eviction(self) -> Optional[str]:
         """
         Determines eviction candidate based on dynamic thresholds.

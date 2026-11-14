@@ -47,11 +47,11 @@ st.markdown(
 <style>
     /* Styling headers and body */
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
-    
+
     html, body, [class*="css"] {
         font-family: 'Outfit', sans-serif;
     }
-    
+
     .main-title {
         background: linear-gradient(135deg, #FF3366 0%, #FF9933 50%, #9933FF 100%);
         -webkit-background-clip: text;
@@ -60,13 +60,13 @@ st.markdown(
         font-size: 3rem;
         margin-bottom: 0.5rem;
     }
-    
+
     .subtitle {
         font-size: 1.2rem;
         color: #A0AEC0;
         margin-bottom: 2rem;
     }
-    
+
     /* Card design for repositories */
     .repo-card {
         background: rgba(255, 255, 255, 0.03);
@@ -77,62 +77,62 @@ st.markdown(
         transition: transform 0.2s, border-color 0.2s;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
-    
+
     .repo-card:hover {
         transform: translateY(-2px);
         border-color: rgba(255, 255, 255, 0.2);
         background: rgba(255, 255, 255, 0.05);
     }
-    
+
     .repo-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 0.8rem;
     }
-    
+
     .repo-title a {
         font-size: 1.4rem;
         font-weight: 600;
         color: #63B3ED !important;
         text-decoration: none;
     }
-    
+
     .repo-title a:hover {
         text-decoration: underline;
     }
-    
+
     .badge-container {
         display: flex;
         gap: 0.5rem;
     }
-    
+
     .badge {
         padding: 0.2rem 0.6rem;
         border-radius: 20px;
         font-size: 0.8rem;
         font-weight: 500;
     }
-    
+
     .badge-lang {
         background-color: #2D3748;
         color: #E2E8F0;
         border: 1px solid #4A5568;
     }
-    
+
     .badge-stars {
         background-color: rgba(236, 201, 75, 0.1);
         color: #F6E05E;
         border: 1px solid rgba(236, 201, 75, 0.3);
     }
-    
+
     .repo-desc {
         color: #E2E8F0;
         font-size: 1rem;
         line-height: 1.6;
         margin-bottom: 1rem;
     }
-    
+
     .repo-match-label {
         font-size: 0.8rem;
         color: #718096;
@@ -140,7 +140,7 @@ st.markdown(
         letter-spacing: 0.05em;
         margin-bottom: 0.3rem;
     }
-    
+
     .repo-match-chunk {
         font-size: 0.9rem;
         color: #CBD5E0;
@@ -149,7 +149,7 @@ st.markdown(
         border-radius: 6px;
         border-left: 3px solid #FF9933;
     }
-    
+
     .warning-box {
         background: rgba(229, 62, 62, 0.1);
         border: 1px solid rgba(229, 62, 62, 0.3);
