@@ -1,3 +1,20 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="ideation-goat Logo" width="120" height="120" />
+</p>
+
+<h1 align="center">ideation-goat</h1>
+
+<p align="center">
+  <em>Multi-Domain Semantic Architect Agent supporting codebase matching, academic research & patent search</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-Maintained-success?style=flat-square" alt="Status" />
+  <img src="https://img.shields.io/badge/License-Protected-blue?style=flat-square" alt="License" />
+</p>
+
+---
+
 ![Ideation GOAT Banner](assets/banner.png)
 
 <div align="center">
